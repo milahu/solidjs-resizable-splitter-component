@@ -2,7 +2,8 @@
   "name": "example-project",
   "type": "module",
   "scripts": {
-    "dev": "vite --clearScreen false"
+    "dev": "vite --clearScreen false",
+    "build": "vite build"
   },
   "devDependencies": {
     "vite": "*",
