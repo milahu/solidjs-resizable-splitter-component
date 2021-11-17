@@ -20,7 +20,6 @@ export function SplitY(props) {
           (props.reverse ? 'layout-reverse' : ''),
         ].join(' ')}
         style={{
-          //'flex-basis': isNum(props.size) ? (props.size*100)+'%' : props.size,
           width: '100%',
           height: '100%',
           overflow: 'auto',
@@ -52,7 +51,6 @@ export function SplitX(props) {
           (props.reverse ? 'layout-reverse' : ''),
         ].join(' ')}
         style={{
-          //'flex-basis': isNum(props.size) ? (props.size*100)+'%' : props.size,
           width: '100%',
           height: '100%',
           overflow: 'auto',
@@ -61,8 +59,10 @@ export function SplitX(props) {
       >
         <For each={props.children}>{childComponent => {
           if (
-            childComponent.classList.contains('split-vertical') ||
-            childComponent.classList.contains('split-horizontal')
+            childComponent.classList && (
+              childComponent.classList.contains('split-vertical') ||
+              childComponent.classList.contains('split-horizontal')
+            )
           ) {
             //console.log(`branch node`, childComponent)
             return childComponent;
@@ -304,9 +304,26 @@ function SplitItem(props) {
       debugParent(activeMoveParent, ['style', 'flexBasis'])
     );
   }
-  
+
+  // csd: CSSStyleDeclaration
+  function objectOfStyleDeclaration(csd) {
+    const res = {};
+    for (const key of csd) {
+      res[key] = csd[key];
+    }
+    return res;
+  }
+
+  // move style from child to wrapper
+  // to keep the child style, wrap the child in a <div>
+  const childStyle = objectOfStyleDeclaration(props.childComponent.style);
+  props.childComponent.style = null;
+
   return (
-    <div class="layout-cell" style="flex-basis: 50%; flex-grow: 1;">
+    <div class="layout-cell" style={{
+      'flex-grow': 1,
+      ...childStyle
+    }}>
       <div class="top">
         <div class="frame left" onMouseDown={handleMoveStart} />
         <div class="frame center" onMouseDown={handleMoveStart} />
