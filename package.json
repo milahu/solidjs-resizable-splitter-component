@@ -1,0 +1,27 @@
+{
+  "name": "solidjs-resizable-splitter-component",
+  "version": "0.0.1",
+  "description": "resizable splitter component for SolidJS",
+  "module": "src/splitter.jsx",
+  "dependencies": {
+    "solid-styled-components": "*"
+  },
+  "peerDependencies": {
+    "solid-js": "*"
+  },
+  "keywords": [
+    "solid",
+    "solid-js",
+    "solidjs",
+    "component",
+    "splitter",
+    "layout",
+    "resizable"
+  ],
+  "author": "milahu",
+  "license": "CC0-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/milahu/solidjs-resizable-splitter-component.git"
+  }
+}

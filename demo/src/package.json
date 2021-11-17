@@ -1,0 +1,15 @@
+{
+  "name": "example-project",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --clearScreen false"
+  },
+  "devDependencies": {
+    "vite": "*",
+    "vite-plugin-solid": "*",
+    "solidjs-resizable-splitter-component": "github:milahu/solidjs-resizable-splitter-component"
+  },
+  "dependencies": {
+    "solid-js": "*"
+  }
+}
