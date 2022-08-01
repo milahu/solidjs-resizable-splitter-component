@@ -1,0 +1,33 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# Search for "editorconfig" in VS Code plugins.
+
+# This file tells your editor what generic display format settings to use within
+# a give folder/project. Code formatting is not enough: a project may have its
+# own formatting, but if your editor is not configured to have the same
+# formatting, your code input experience will not be as good because your editor
+# will, for example, display formatted code improperly. So, we want both 1) code
+# formatting, and 2) our editor display setting to match that formatting.
+
+# NOTE: Prettier reads this config too, for example .prettierrc.js does not have
+# formatting specified for .md files, yet it does read the config
+# specified in here.
+
+# top-most EditorConfig file
+root = true
+
+[*]
+charset = utf-8
+indent_style = tab
+# indent_size should never be specified if indent_style is "tab", otherwise
+# that defeats the purpose of people configuring their own tab display size.
+# indent_size = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Overrides (these are honored by Prettier)
+
+[*.md]
+indent_size = 2
+indent_style = space
