@@ -8,7 +8,7 @@ https://github.com/solidjs/solid-playground/blob/master/src/components/gridResiz
 FIXME resizer element is not visible
 */
 
-import {onMount} from 'solid-js'
+import {createMemo, onMount} from 'solid-js'
 import {glob as globalStyle} from 'solid-styled-components'
 
 // vertical splitter = flex-direction: column
@@ -26,8 +26,9 @@ export function SplitY(props) {
 			<For each={props.children}>
 				{childComponent => {
 					if (
-						childComponent.classList.contains('split-vertical') ||
-						childComponent.classList.contains('split-horizontal')
+						childComponent instanceof Element && // guard against non-Elements, or else runtime errors
+						(childComponent.classList.contains('split-vertical') ||
+							childComponent.classList.contains('split-horizontal'))
 					) {
 						//console.log(`branch node`, childComponent)
 						return childComponent
@@ -271,7 +272,7 @@ function SplitItem(props) {
 	}
 
 	// csd: CSSStyleDeclaration
-	function objectOfStyleDeclaration(csd) {
+	function objectOfStyleDeclaration(/**@type {CSSStyleDeclaration}*/ csd) {
 		const res = {}
 		for (const key of csd) {
 			res[key] = csd[key]
@@ -279,17 +280,28 @@ function SplitItem(props) {
 		return res
 	}
 
-	// move style from child to wrapper
-	// to keep the child style, wrap the child in a <div>
-	const childStyle = objectOfStyleDeclaration(props.childComponent.style)
-	props.childComponent.style = null
+	const childStyle = createMemo(() => {
+		const el = props.childComponent // reactive, so put this in a memo in case it changes.
+
+		/** @type {CSSStyleDeclaration | null} */
+		let childStyle
+
+		if (el instanceof HTMLElement || el instanceof SVGElement) {
+			// move style from child to wrapper
+			// to keep the child style, wrap the child in a <div>
+			childStyle = objectOfStyleDeclaration(el.style)
+			el.style = null
+		}
+
+		return childStyle
+	})
 
 	return (
 		<div
 			class="layout-cell"
 			style={{
 				'flex-grow': 1,
-				...childStyle,
+				...childStyle(),
 			}}
 		>
 			<div class="top">
