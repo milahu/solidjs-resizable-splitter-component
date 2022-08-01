@@ -14,9 +14,7 @@
 		"lint-staged": "^13.0.3",
 		"prettier": "^2.7.1"
 	},
-	"dependencies": {
-		"solid-styled-components": "*"
-	},
+	"dependencies": {},
 	"peerDependencies": {
 		"solid-js": "*"
 	},

@@ -8,8 +8,7 @@ https://github.com/solidjs/solid-playground/blob/master/src/components/gridResiz
 FIXME resizer element is not visible
 */
 
-import {createMemo, onCleanup, onMount} from 'solid-js'
-import {glob as globalStyle} from 'solid-styled-components'
+import {createMemo, onCleanup, onMount, For} from 'solid-js'
 
 // vertical splitter = flex-direction: column
 export function SplitY(props) {
@@ -93,8 +92,6 @@ function SplitItem(props) {
 	let activeMoveParent = null
 	let activeMoveParentOverflow = ''
 	//let isMoving = false;
-	let lastX = 0
-	let lastY = 0
 	let activeMoveOrigin = null // TODO rename to activeMoveHandle
 	let parentIsLayoutVertical = null
 	let activeMoveCell = null
@@ -103,8 +100,6 @@ function SplitItem(props) {
 
 	function handleMoveStart(event) {
 		const tar = event.target
-		lastX = event.clientX
-		lastY = event.clientY
 		activeMoveOrigin = tar
 		activeMoveCell = tar.parentNode.parentNode
 		const hcl = activeMoveOrigin.classList
@@ -243,13 +238,7 @@ function SplitItem(props) {
 		const handleLeft = hcl.contains('left')
 		const handleTop = hpcl.contains('top')
 		const handleBottom = hpcl.contains('bottom')
-		// const moveDiffX = event.clientX - lastX
-		// const moveDiffY = event.clientY - lastY
-		const moveDiffX = event.movementX
-		const moveDiffY = event.movementY
-		const moveDiff = parentIsLayoutVertical ? moveDiffY : moveDiffX
-		lastX = event.clientX
-		lastY = event.clientY
+		const moveDiff = parentIsLayoutVertical ? event.movementY : event.movementX
 		if (
 			(activeMoveCell_real == firstChild && (handleLeft || handleTop)) ||
 			(activeMoveCell_real == lastChild && (handleRight || handleBottom))
@@ -347,6 +336,11 @@ function SplitItem(props) {
 			</div>
 		</div>
 	)
+}
+
+function globalStyle(/** @type {string} */ css) {
+	const style = /** @type {HTMLStyleElement} */ (<style>{css}</style>)
+	document.head.append(style)
 }
 
 // TODO better way to define style?
