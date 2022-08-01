@@ -8,7 +8,7 @@ https://github.com/solidjs/solid-playground/blob/master/src/components/gridResiz
 FIXME resizer element is not visible
 */
 
-import {createMemo, onMount} from 'solid-js'
+import {createMemo, onCleanup, onMount} from 'solid-js'
 import {glob as globalStyle} from 'solid-styled-components'
 
 // vertical splitter = flex-direction: column
@@ -76,20 +76,25 @@ export function SplitX(props) {
 // item = a leaf node in the layout tree
 function SplitItem(props) {
 	onMount(() => {
-		document.body.addEventListener('mouseup', handleMoveEnd)
-		document.body.addEventListener('mouseleave', handleMoveEnd)
-		document.body.addEventListener('touchend', handleMoveEnd)
+		// TODO disallow multiple pointers (f.e. multiple fingers)
+		document.body.addEventListener('pointerup', handleMoveEnd)
+		document.body.addEventListener('pointerleave', handleMoveEnd)
 	})
 
-	let activeMoveEvent = null
+	onCleanup(() => {
+		document.body.removeEventListener('pointerup', handleMoveEnd)
+		document.body.removeEventListener('pointerleave', handleMoveEnd)
+		document.removeEventListener('pointermove', activeMoveListener)
+	})
+
 	let activeMoveElement = null
 	let activeMoveListener = null
 	//let activeResizeElement = null;
 	let activeMoveParent = null
 	let activeMoveParentOverflow = ''
 	//let isMoving = false;
-	let moveStartX = 0
-	let moveStartY = 0
+	let lastX = 0
+	let lastY = 0
 	let activeMoveOrigin = null // TODO rename to activeMoveHandle
 	let parentIsLayoutVertical = null
 	let activeMoveCell = null
@@ -98,8 +103,8 @@ function SplitItem(props) {
 
 	function handleMoveStart(event) {
 		const tar = event.target
-		moveStartX = event.clientX
-		moveStartY = event.clientY
+		lastX = event.clientX
+		lastY = event.clientY
 		activeMoveOrigin = tar
 		activeMoveCell = tar.parentNode.parentNode
 		const hcl = activeMoveOrigin.classList
@@ -133,7 +138,6 @@ function SplitItem(props) {
 		// stop selecting text
 		// use hidden css class to save other components
 		document.body.classList.add('--layout-is-moving')
-		activeMoveEvent = event.type[0] == 'm' ? 'mousemove' : 'touchmove'
 
 		// FIXME resizer element is not visible
 		activeMoveElement = tar.cloneNode(true)
@@ -161,6 +165,8 @@ function SplitItem(props) {
 			activeMoveListener = function (event) {
 				// optimized hot code
 				newStyle.top = event.clientY + 'px'
+
+				calcLayout(event)
 			}
 		} else {
 			// parent is split-horizontal
@@ -177,9 +183,11 @@ function SplitItem(props) {
 			activeMoveListener = function (event) {
 				// optimized hot code
 				newStyle.left = event.clientX + 'px'
+
+				calcLayout(event)
 			}
 		}
-		document.addEventListener(activeMoveEvent, activeMoveListener)
+		document.addEventListener('pointermove', activeMoveListener)
 	}
 
 	function debugParent(parent, keyList) {
@@ -203,19 +211,21 @@ function SplitItem(props) {
 	function handleMoveEnd(event) {
 		if (!activeMoveListener) return
 		document.body.classList.remove('--layout-is-moving')
-		const moveDiffX = event.clientX - moveStartX
-		const moveDiffY = event.clientY - moveStartY
-		const moveDiff = parentIsLayoutVertical ? moveDiffY : moveDiffX
 		document.body.removeChild(activeMoveElement)
 		activeMoveElement = null
 		activeMoveParent.style.overflow = activeMoveParentOverflow
-		document.removeEventListener(activeMoveEvent, activeMoveListener)
+		document.removeEventListener('pointermove', activeMoveListener)
 		activeMoveListener = null
-		if (event.type == 'mouseleave') {
-			// TODO touchleave?
+
+		if (event.type == 'pointerleave') {
 			// keep layout
 			return
 		}
+
+		calcLayout(event)
+	}
+
+	function calcLayout(event) {
 		const hcl = activeMoveOrigin.classList
 		const hpcl = activeMoveOrigin.parentNode.classList
 		const containerSize = activeMoveParent[activeMoveSizeKey]
@@ -233,8 +243,13 @@ function SplitItem(props) {
 		const handleLeft = hcl.contains('left')
 		const handleTop = hpcl.contains('top')
 		const handleBottom = hpcl.contains('bottom')
-		let node_before = null
-		let node_after = null
+		// const moveDiffX = event.clientX - lastX
+		// const moveDiffY = event.clientY - lastY
+		const moveDiffX = event.movementX
+		const moveDiffY = event.movementY
+		const moveDiff = parentIsLayoutVertical ? moveDiffY : moveDiffX
+		lastX = event.clientX
+		lastY = event.clientY
 		if (
 			(activeMoveCell_real == firstChild && (handleLeft || handleTop)) ||
 			(activeMoveCell_real == lastChild && (handleRight || handleBottom))
@@ -259,7 +274,7 @@ function SplitItem(props) {
 			node_size_new[index_after] -= moveDiff
 			// set cell size
 			for (let [index, node] of containerChildren.entries()) {
-				node.style.flexBasis = Math.round((node_size_new[index] / size_sum) * 100) + '%'
+				node.style.flexBasis = (node_size_new[index] / size_sum) * 100 + '%'
 			}
 		}
 		return
@@ -306,13 +321,13 @@ function SplitItem(props) {
 			}}
 		>
 			<div class="top">
-				<div class="frame left" onMouseDown={handleMoveStart} />
-				<div class="frame center" onMouseDown={handleMoveStart} />
-				<div class="frame right" onMouseDown={handleMoveStart} />
+				<div class="frame left" onpointerdown={handleMoveStart} />
+				<div class="frame center" onpointerdown={handleMoveStart} />
+				<div class="frame right" onpointerdown={handleMoveStart} />
 			</div>
 
 			<div class="middle">
-				<div class="frame left" onMouseDown={handleMoveStart} />
+				<div class="frame left" onpointerdown={handleMoveStart} />
 				<div class="center" style={props.style}>
 					{props.childComponent}
 					{/* not working 0__o
@@ -322,13 +337,13 @@ function SplitItem(props) {
           }}</For>
           */}
 				</div>
-				<div class="frame right" onMouseDown={handleMoveStart} />
+				<div class="frame right" onpointerdown={handleMoveStart} />
 			</div>
 
 			<div class="bottom">
-				<div class="frame left" onMouseDown={handleMoveStart} />
-				<div class="frame center" onMouseDown={handleMoveStart} />
-				<div class="frame right" onMouseDown={handleMoveStart} />
+				<div class="frame left" onpointerdown={handleMoveStart} />
+				<div class="frame center" onpointerdown={handleMoveStart} />
+				<div class="frame right" onpointerdown={handleMoveStart} />
 			</div>
 		</div>
 	)
@@ -337,7 +352,7 @@ function SplitItem(props) {
 // TODO better way to define style?
 // we need `node.classList.toggle('expand')`
 // but we dont care about the exact class name
-globalStyle(`
+globalStyle(/*css*/ `
   body {
     /* css variables */
     --handleSize: 5px; /* visible handle size */
@@ -359,6 +374,8 @@ globalStyle(`
     background-clip: content-box; /* transparent padding */
     padding-top: var(--handlePadding);
     /*margin-top: var(--handleMargin);*/
+		pointer-events: none;
+		display: none;
   }
   .split-horizontal-resizer {
     width: var(--handleSize) !important;
@@ -372,6 +389,8 @@ globalStyle(`
     background-clip: content-box; /* transparent padding */
     padding-left: var(--handlePadding);
     /*margin-left: var(--handleMargin);*/
+		pointer-events: none;
+		display: none;
   }
   body.--layout-is-moving,
   body.--layout-is-moving * {
@@ -490,7 +509,7 @@ globalStyle(`
 `)
 
 // user style
-globalStyle(`
+globalStyle(/*css*/ `
   /* layout */
   body {
     /* use full window size */
@@ -500,11 +519,18 @@ globalStyle(`
     /* content cell: add scrollbars when needed */
     overflow: auto;
   }
-  .layout-cell>*>.frame {
-    /* frame color and border */
-    /*background-color: #f4f4f4;*/
-    border: solid 1px #a8a8a8;
-  }
+	.split-horizontal > .layout-cell {
+    border-right: solid 1px #a8a8a8;
+	}
+	.split-horizontal > .layout-cell:last-child {
+    border-right: none;
+	}
+	.split-vertical > .layout-cell {
+    border-bottom: solid 1px #a8a8a8;
+	}
+	.split-vertical > .layout-cell:last-child {
+    border-bottom: none;
+	}
   .layout-cell>*, .layout-cell>*>.frame {
     /* frame size
        larger frames are better acccessible (touchscreen)

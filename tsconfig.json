@@ -1,9 +1,11 @@
 {
 	"compilerOptions": {
 		"allowJs": true,
-		"checkJs": false,
+		"checkJs": true,
 		"module": "esnext",
 		"moduleResolution": "node",
+		"target": "ES2021",
+		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
 		"lib": ["DOM", "DOM.Iterable", "ES2021"]
 	},
