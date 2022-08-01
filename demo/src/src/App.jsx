@@ -1,9 +1,8 @@
-import { SplitY, SplitX } from 'solidjs-resizable-splitter-component';
+import { SplitY, SplitX } from "solidjs-resizable-splitter-component";
 
-export default function App(props) {
-
+export function App(props) {
   return (
-    <div style="height: 100vh">
+    <div style="height: 100%">
       <SplitY>
         <SplitX>
           <div>Y1 X1</div>
