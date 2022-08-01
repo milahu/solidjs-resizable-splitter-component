@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": false,
+		"module": "esnext",
+		"moduleResolution": "node",
+		"jsxImportSource": "solid-js",
+		"lib": ["DOM", "DOM.Iterable", "ES2021"]
+	},
+	"include": ["./src/**/*.js", "./src/**/*.jsx"]
+}

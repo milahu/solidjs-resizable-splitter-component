@@ -273,6 +273,7 @@ function SplitItem(props) {
 
 	// csd: CSSStyleDeclaration
 	function objectOfStyleDeclaration(/**@type {CSSStyleDeclaration}*/ csd) {
+		/** @type {{[k in keyof CSSStyleDeclaration]: string}} */
 		const res = {}
 		for (const key of csd) {
 			res[key] = csd[key]
@@ -283,8 +284,8 @@ function SplitItem(props) {
 	const childStyle = createMemo(() => {
 		const el = props.childComponent // reactive, so put this in a memo in case it changes.
 
-		/** @type {CSSStyleDeclaration | null} */
-		let childStyle
+		/** @type {ReturnType<typeof objectOfStyleDeclaration> | null} */
+		let childStyle = null
 
 		if (el instanceof HTMLElement || el instanceof SVGElement) {
 			// move style from child to wrapper
