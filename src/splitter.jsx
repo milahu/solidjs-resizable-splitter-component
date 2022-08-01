@@ -8,352 +8,318 @@ https://github.com/solidjs/solid-playground/blob/master/src/components/gridResiz
 FIXME resizer element is not visible
 */
 
-import { onMount } from 'solid-js';
-import { glob as globalStyle } from 'solid-styled-components';
+import {onMount} from 'solid-js'
+import {glob as globalStyle} from 'solid-styled-components'
 
 // vertical splitter = flex-direction: column
 export function SplitY(props) {
-  return (
-      <div
-        class={[
-          'split-vertical',
-          (props.reverse ? 'layout-reverse' : ''),
-        ].join(' ')}
-        style={{
-          width: '100%',
-          height: '100%',
-          overflow: 'auto',
-          ...(props.style || {}),
-        }}
-      >
-        <For each={props.children}>{childComponent => {
-          if (
-            childComponent.classList.contains('split-vertical') ||
-            childComponent.classList.contains('split-horizontal')
-          ) {
-            //console.log(`branch node`, childComponent)
-            return childComponent;
-          }
-          //console.log(`leaf node`, childComponent)
-          //return <SplitItem>{childComponent}</SplitItem>; // not working 0__o
-          return <SplitItem childComponent={childComponent}/>;
-        }}</For>
-      </div>
-  );
+	return (
+		<div
+			class={['split-vertical', props.reverse ? 'layout-reverse' : ''].join(' ')}
+			style={{
+				width: '100%',
+				height: '100%',
+				overflow: 'auto',
+				...(props.style || {}),
+			}}
+		>
+			<For each={props.children}>
+				{childComponent => {
+					if (
+						childComponent.classList.contains('split-vertical') ||
+						childComponent.classList.contains('split-horizontal')
+					) {
+						//console.log(`branch node`, childComponent)
+						return childComponent
+					}
+					//console.log(`leaf node`, childComponent)
+					//return <SplitItem>{childComponent}</SplitItem>; // not working 0__o
+					return <SplitItem childComponent={childComponent} />
+				}}
+			</For>
+		</div>
+	)
 }
 
 // horizontal splitter = flex-direction: row
 export function SplitX(props) {
-  return (
-      <div
-        class={[
-          'split-horizontal',
-          (props.reverse ? 'layout-reverse' : ''),
-        ].join(' ')}
-        style={{
-          width: '100%',
-          height: '100%',
-          overflow: 'auto',
-          ...(props.style || {}),
-        }}
-      >
-        <For each={props.children}>{childComponent => {
-          if (
-            childComponent.classList && (
-              childComponent.classList.contains('split-vertical') ||
-              childComponent.classList.contains('split-horizontal')
-            )
-          ) {
-            //console.log(`branch node`, childComponent)
-            return childComponent;
-          }
-          //console.log(`leaf node`, childComponent)
-          //return <SplitItem>{childComponent}</SplitItem>; // not working 0__o
-          return <SplitItem childComponent={childComponent}/>;
-        }}</For>
-      </div>
-  );
+	return (
+		<div
+			class={['split-horizontal', props.reverse ? 'layout-reverse' : ''].join(' ')}
+			style={{
+				width: '100%',
+				height: '100%',
+				overflow: 'auto',
+				...(props.style || {}),
+			}}
+		>
+			<For each={props.children}>
+				{childComponent => {
+					if (
+						childComponent.classList &&
+						(childComponent.classList.contains('split-vertical') ||
+							childComponent.classList.contains('split-horizontal'))
+					) {
+						//console.log(`branch node`, childComponent)
+						return childComponent
+					}
+					//console.log(`leaf node`, childComponent)
+					//return <SplitItem>{childComponent}</SplitItem>; // not working 0__o
+					return <SplitItem childComponent={childComponent} />
+				}}
+			</For>
+		</div>
+	)
 }
 
 // item = a leaf node in the layout tree
 function SplitItem(props) {
+	onMount(() => {
+		document.body.addEventListener('mouseup', handleMoveEnd)
+		document.body.addEventListener('mouseleave', handleMoveEnd)
+		document.body.addEventListener('touchend', handleMoveEnd)
+	})
 
-  onMount(() => {
-    document.body.addEventListener('mouseup', handleMoveEnd);
-    document.body.addEventListener('mouseleave', handleMoveEnd);
-    document.body.addEventListener('touchend', handleMoveEnd);
-  })
+	let activeMoveEvent = null
+	let activeMoveElement = null
+	let activeMoveListener = null
+	//let activeResizeElement = null;
+	let activeMoveParent = null
+	let activeMoveParentOverflow = ''
+	//let isMoving = false;
+	let moveStartX = 0
+	let moveStartY = 0
+	let activeMoveOrigin = null // TODO rename to activeMoveHandle
+	let parentIsLayoutVertical = null
+	let activeMoveCell = null
+	let activeMoveCell_real = null // TODO rename
+	let activeMoveSizeKey = ''
 
-  let activeMoveEvent = null;
-  let activeMoveElement = null;
-  let activeMoveListener = null;
-  //let activeResizeElement = null;
-  let activeMoveParent = null;
-  let activeMoveParentOverflow = '';
-  //let isMoving = false;
-  let moveStartX = 0;
-  let moveStartY = 0;
-  let activeMoveOrigin = null; // TODO rename to activeMoveHandle
-  let parentIsLayoutVertical = null;
-  let activeMoveCell = null;
-  let activeMoveCell_real = null; // TODO rename
-  let activeMoveSizeKey = '';
+	function handleMoveStart(event) {
+		const tar = event.target
+		moveStartX = event.clientX
+		moveStartY = event.clientY
+		activeMoveOrigin = tar
+		activeMoveCell = tar.parentNode.parentNode
+		const hcl = activeMoveOrigin.classList
+		const hpcl = activeMoveOrigin.parentNode.classList
+		//console.log('hcl =', hcl);
+		activeMoveCell_real = activeMoveCell
+		activeMoveParent = activeMoveCell.parentNode
+		// what handle was moved?
+		const handleRight = hcl.contains('right')
+		const handleLeft = hcl.contains('left')
+		const handleTop = hpcl.contains('top')
+		const handleBottom = hpcl.contains('bottom')
+		const activeMoveParentClass = handleLeft || handleRight ? 'split-horizontal' : 'split-vertical'
+		const sizeKeyPrefix = 'offset' // all the same?
+		activeMoveSizeKey = activeMoveParentClass == 'split-vertical' ? sizeKeyPrefix + 'Height' : sizeKeyPrefix + 'Width'
+		// find parent container
+		while (activeMoveParent && activeMoveCell_real && !activeMoveParent.classList.contains(activeMoveParentClass)) {
+			activeMoveCell_real = activeMoveCell_real.parentElement
+			activeMoveParent = activeMoveParent.parentElement
+		}
+		if (!activeMoveParent) {
+			console.log('error. activeMoveParent not found')
+			return
+		}
+		if (!activeMoveCell_real) {
+			console.log('error. activeMoveCell_real not found')
+			return
+		}
+		//console.log('found activeMoveParent', activeMoveParent.className);
+		//console.log('found activeMoveCell_real', activeMoveCell_real.className);
+		// stop selecting text
+		// use hidden css class to save other components
+		document.body.classList.add('--layout-is-moving')
+		activeMoveEvent = event.type[0] == 'm' ? 'mousemove' : 'touchmove'
 
-  function handleMoveStart(event) {
-    const tar = event.target;
-    moveStartX = event.clientX;
-    moveStartY = event.clientY;
-    activeMoveOrigin = tar;
-    activeMoveCell = tar.parentNode.parentNode;
-    const hcl = activeMoveOrigin.classList;
-    const hpcl = activeMoveOrigin.parentNode.classList;
-    //console.log('hcl =', hcl);
-    activeMoveCell_real = activeMoveCell;
-    activeMoveParent = activeMoveCell.parentNode;
-    // what handle was moved?
-    const handleRight = hcl.contains('right');
-    const handleLeft = hcl.contains('left');
-    const handleTop = hpcl.contains('top');
-    const handleBottom = hpcl.contains('bottom');
-    const activeMoveParentClass = (
-      handleLeft || handleRight
-    ) ? 'split-horizontal' : 'split-vertical';
-    const sizeKeyPrefix = 'offset'; // all the same?
-    activeMoveSizeKey = (activeMoveParentClass == 'split-vertical')
-      ? sizeKeyPrefix+'Height'
-      : sizeKeyPrefix+'Width';
-    // find parent container
-    while (
-      activeMoveParent &&
-      activeMoveCell_real &&
-      !activeMoveParent.classList.contains(activeMoveParentClass)
-    ) {
-      activeMoveCell_real = activeMoveCell_real.parentElement;
-      activeMoveParent = activeMoveParent.parentElement;
-    }
-    if (!activeMoveParent) {
-      console.log('error. activeMoveParent not found');
-      return;
-    }
-    if (!activeMoveCell_real) {
-      console.log('error. activeMoveCell_real not found');
-      return;
-    }
-    //console.log('found activeMoveParent', activeMoveParent.className);
-    //console.log('found activeMoveCell_real', activeMoveCell_real.className);
-    // stop selecting text
-    // use hidden css class to save other components
-    document.body.classList.add('--layout-is-moving');
-    activeMoveEvent = (event.type[0] == 'm')
-      ? 'mousemove' : 'touchmove';
+		// FIXME resizer element is not visible
+		activeMoveElement = tar.cloneNode(true)
+		const newStyle = activeMoveElement.style
+		newStyle.position = 'absolute'
+		newStyle.zIndex = 10 // force to front layer
+		document.body.appendChild(activeMoveElement)
+		activeMoveParentOverflow = activeMoveParent.style.overflow
+		activeMoveParent.style.overflow = 'hidden'
+		// TODO verify. is this a good idea?
+		// we want to avoid scrollbars on resize
+		const handle_size = 1
+		if (activeMoveParentClass == 'split-vertical') {
+			// parent is split-vertical
+			// handleTop || handleBottom
+			parentIsLayoutVertical = true
+			//console.log('add marginTop', (handleTop ? tar.offsetHeight : 0));
+			newStyle.marginTop = tar.offsetTop - (handleTop ? tar.offsetHeight : 0) + handle_size / 2 - event.clientY + 'px'
+			newStyle.left = activeMoveParent.offsetLeft + 'px'
+			newStyle.top = event.clientY + 'px'
+			// will change in move handler
+			newStyle.height = tar.offsetHeight + 'px'
+			newStyle.width = activeMoveParent.offsetWidth + 'px'
+			activeMoveElement.className = 'split-vertical-resizer'
+			activeMoveListener = function (event) {
+				// optimized hot code
+				newStyle.top = event.clientY + 'px'
+			}
+		} else {
+			// parent is split-horizontal
+			// handleLeft || handleRight
+			parentIsLayoutVertical = false
+			activeMoveElement.className = 'split-horizontal-resizer'
+			//console.log('add marginLeft', (handleLeft ? tar.offsetWidth : 0));
+			newStyle.marginLeft = tar.offsetLeft - (handleLeft ? tar.offsetWidth : 0) + handle_size / 2 - event.clientX + 'px'
+			newStyle.top = activeMoveParent.offsetTop + 'px'
+			newStyle.left = event.clientX + 'px'
+			// will change in move handler
+			newStyle.height = activeMoveParent.offsetHeight + 'px'
+			newStyle.width = tar.offsetWidth + 'px'
+			activeMoveListener = function (event) {
+				// optimized hot code
+				newStyle.left = event.clientX + 'px'
+			}
+		}
+		document.addEventListener(activeMoveEvent, activeMoveListener)
+	}
 
-    // FIXME resizer element is not visible
-    activeMoveElement = tar.cloneNode(true);
-    const newStyle = activeMoveElement.style;
-    newStyle.position = 'absolute';
-    newStyle.zIndex = 10; // force to front layer
-    document.body.appendChild(activeMoveElement);
-    activeMoveParentOverflow = activeMoveParent.style.overflow;
-    activeMoveParent.style.overflow = 'hidden';
-    // TODO verify. is this a good idea?
-    // we want to avoid scrollbars on resize
-    const handle_size = 1;
-    if (activeMoveParentClass == 'split-vertical') {
-      // parent is split-vertical
-      // handleTop || handleBottom
-      parentIsLayoutVertical = true;
-      //console.log('add marginTop', (handleTop ? tar.offsetHeight : 0));
-      newStyle.marginTop = (
-        tar.offsetTop
-        - (handleTop ? tar.offsetHeight : 0)
-        + handle_size/2
-        - event.clientY
-      ) + 'px';
-      newStyle.left = activeMoveParent.offsetLeft + 'px';
-      newStyle.top = event.clientY + 'px';
-      // will change in move handler
-      newStyle.height = tar.offsetHeight + 'px';
-      newStyle.width = activeMoveParent.offsetWidth + 'px';
-      activeMoveElement.className = 'split-vertical-resizer';
-      activeMoveListener = function(event){
-        // optimized hot code
-        newStyle.top = event.clientY + 'px';
-      };
-    } else {
-      // parent is split-horizontal
-      // handleLeft || handleRight
-      parentIsLayoutVertical = false;
-      activeMoveElement.className = 'split-horizontal-resizer';
-      //console.log('add marginLeft', (handleLeft ? tar.offsetWidth : 0));
-      newStyle.marginLeft = (
-        tar.offsetLeft
-        - (handleLeft ? tar.offsetWidth : 0)
-        + handle_size/2
-        - event.clientX
-      ) + 'px';
-      newStyle.top = activeMoveParent.offsetTop + 'px';
-      newStyle.left = event.clientX + 'px';
-      // will change in move handler
-      newStyle.height = activeMoveParent.offsetHeight + 'px';
-      newStyle.width = tar.offsetWidth + 'px';
-      activeMoveListener = function(event){
-        // optimized hot code
-        newStyle.left = event.clientX + 'px';
-      };
-    }
-    document.addEventListener(activeMoveEvent, activeMoveListener);
-  }
-  
-  function debugParent(parent, keyList) {
-    return Array.from(parent.children)
-    .map((element)=>{
-      let res = element;
-      for (let k of keyList) {
-        res = res[k];
-      }
-      return parseInt(res, 10)
-    })
-    .reduce((acc, val, idx, arr) => {
-      acc += ' '+val;
-      if (idx == arr.length - 1) {
-        acc += ' = '+arr.reduce((acc,val)=> (acc+val), 0);
-      }
-      return acc;
-    }, '');
-  }
-  
-  function handleMoveEnd(event) {
-    if (!activeMoveListener) return;
-    document.body.classList.remove('--layout-is-moving');
-    const moveDiffX = event.clientX - moveStartX;
-    const moveDiffY = event.clientY - moveStartY;
-    const moveDiff = parentIsLayoutVertical
-      ? moveDiffY : moveDiffX;
-    document.body.removeChild(activeMoveElement);
-    activeMoveElement = null;
-    activeMoveParent.style.overflow = activeMoveParentOverflow;
-    document.removeEventListener(
-      activeMoveEvent, activeMoveListener);
-    activeMoveListener = null;
-    if (event.type == 'mouseleave') { // TODO touchleave?
-      // keep layout
-      return;
-    }
-    const hcl = activeMoveOrigin.classList;
-    const hpcl = activeMoveOrigin.parentNode.classList;
-    const containerSize = activeMoveParent[activeMoveSizeKey];
-    const containerChildren = Array.from(activeMoveParent.children);
-    const firstChild = containerChildren[0];
-    const lastChild = containerChildren.slice(-1)[0];
-    // save old sizes
-    // when one cell size is changed
-    // then all other cells change too (css flex)
-    let node_size_new = containerChildren
-      .map((node) => node[activeMoveSizeKey]);
-    let size_sum = node_size_new
-      .reduce((acc, val) => (acc + val), 0);
-    let moveCellIndex = containerChildren
-      .indexOf(activeMoveCell_real);
-    // what handle was moved?
-    const handleRight = hcl.contains('right');
-    const handleLeft = hcl.contains('left');
-    const handleTop = hpcl.contains('top');
-    const handleBottom = hpcl.contains('bottom');
-    let node_before = null;
-    let node_after = null;
-    if (
-      (
-        activeMoveCell_real == firstChild &&
-        (handleLeft || handleTop)
-      ) ||
-      (
-        activeMoveCell_real == lastChild &&
-        (handleRight || handleBottom)
-      )
-    ) {
-      console.log('TODO resize from container start/end');
-      size_sum += moveDiff;
-      // TODO fix resize
-    } else {
-      // handle is in middle of container
-      // get cells before and after handle
-      let index_before = 0;
-      let index_after = 0;
-      if (handleLeft || handleTop) {
-        index_before = moveCellIndex - 1;
-        index_after = moveCellIndex;
-      }
-      else {
-        index_before = moveCellIndex;
-        index_after = moveCellIndex + 1;
-      }
-      // change cell size
-      node_size_new[index_before] += moveDiff;
-      node_size_new[index_after] -= moveDiff;
-      // set cell size
-      for (let [index, node] of containerChildren.entries()) {
-        node.style.flexBasis = Math.round(
-          node_size_new[index] / size_sum * 100)+'%';
-      }
-    }
-    return;
-    console.log(
-      'size old:',
-      debugParent(activeMoveParent, [activeMoveSizeKey]),
-      '=',
-      debugParent(activeMoveParent, ['style', 'flexBasis'])
-    );
-  }
+	function debugParent(parent, keyList) {
+		return Array.from(parent.children)
+			.map(element => {
+				let res = element
+				for (let k of keyList) {
+					res = res[k]
+				}
+				return parseInt(res, 10)
+			})
+			.reduce((acc, val, idx, arr) => {
+				acc += ' ' + val
+				if (idx == arr.length - 1) {
+					acc += ' = ' + arr.reduce((acc, val) => acc + val, 0)
+				}
+				return acc
+			}, '')
+	}
 
-  // csd: CSSStyleDeclaration
-  function objectOfStyleDeclaration(csd) {
-    const res = {};
-    for (const key of csd) {
-      res[key] = csd[key];
-    }
-    return res;
-  }
+	function handleMoveEnd(event) {
+		if (!activeMoveListener) return
+		document.body.classList.remove('--layout-is-moving')
+		const moveDiffX = event.clientX - moveStartX
+		const moveDiffY = event.clientY - moveStartY
+		const moveDiff = parentIsLayoutVertical ? moveDiffY : moveDiffX
+		document.body.removeChild(activeMoveElement)
+		activeMoveElement = null
+		activeMoveParent.style.overflow = activeMoveParentOverflow
+		document.removeEventListener(activeMoveEvent, activeMoveListener)
+		activeMoveListener = null
+		if (event.type == 'mouseleave') {
+			// TODO touchleave?
+			// keep layout
+			return
+		}
+		const hcl = activeMoveOrigin.classList
+		const hpcl = activeMoveOrigin.parentNode.classList
+		const containerSize = activeMoveParent[activeMoveSizeKey]
+		const containerChildren = Array.from(activeMoveParent.children)
+		const firstChild = containerChildren[0]
+		const lastChild = containerChildren.slice(-1)[0]
+		// save old sizes
+		// when one cell size is changed
+		// then all other cells change too (css flex)
+		let node_size_new = containerChildren.map(node => node[activeMoveSizeKey])
+		let size_sum = node_size_new.reduce((acc, val) => acc + val, 0)
+		let moveCellIndex = containerChildren.indexOf(activeMoveCell_real)
+		// what handle was moved?
+		const handleRight = hcl.contains('right')
+		const handleLeft = hcl.contains('left')
+		const handleTop = hpcl.contains('top')
+		const handleBottom = hpcl.contains('bottom')
+		let node_before = null
+		let node_after = null
+		if (
+			(activeMoveCell_real == firstChild && (handleLeft || handleTop)) ||
+			(activeMoveCell_real == lastChild && (handleRight || handleBottom))
+		) {
+			console.log('TODO resize from container start/end')
+			size_sum += moveDiff
+			// TODO fix resize
+		} else {
+			// handle is in middle of container
+			// get cells before and after handle
+			let index_before = 0
+			let index_after = 0
+			if (handleLeft || handleTop) {
+				index_before = moveCellIndex - 1
+				index_after = moveCellIndex
+			} else {
+				index_before = moveCellIndex
+				index_after = moveCellIndex + 1
+			}
+			// change cell size
+			node_size_new[index_before] += moveDiff
+			node_size_new[index_after] -= moveDiff
+			// set cell size
+			for (let [index, node] of containerChildren.entries()) {
+				node.style.flexBasis = Math.round((node_size_new[index] / size_sum) * 100) + '%'
+			}
+		}
+		return
+		console.log(
+			'size old:',
+			debugParent(activeMoveParent, [activeMoveSizeKey]),
+			'=',
+			debugParent(activeMoveParent, ['style', 'flexBasis']),
+		)
+	}
 
-  // move style from child to wrapper
-  // to keep the child style, wrap the child in a <div>
-  const childStyle = objectOfStyleDeclaration(props.childComponent.style);
-  props.childComponent.style = null;
+	// csd: CSSStyleDeclaration
+	function objectOfStyleDeclaration(csd) {
+		const res = {}
+		for (const key of csd) {
+			res[key] = csd[key]
+		}
+		return res
+	}
 
-  return (
-    <div class="layout-cell" style={{
-      'flex-grow': 1,
-      ...childStyle
-    }}>
-      <div class="top">
-        <div class="frame left" onMouseDown={handleMoveStart} />
-        <div class="frame center" onMouseDown={handleMoveStart} />
-        <div class="frame right" onMouseDown={handleMoveStart} />
-      </div>
+	// move style from child to wrapper
+	// to keep the child style, wrap the child in a <div>
+	const childStyle = objectOfStyleDeclaration(props.childComponent.style)
+	props.childComponent.style = null
 
-      <div class="middle">
-        <div class="frame left" onMouseDown={handleMoveStart} />
-        <div class="center" style={props.style}>
-          {props.childComponent}
-          {/* not working 0__o
+	return (
+		<div
+			class="layout-cell"
+			style={{
+				'flex-grow': 1,
+				...childStyle,
+			}}
+		>
+			<div class="top">
+				<div class="frame left" onMouseDown={handleMoveStart} />
+				<div class="frame center" onMouseDown={handleMoveStart} />
+				<div class="frame right" onMouseDown={handleMoveStart} />
+			</div>
+
+			<div class="middle">
+				<div class="frame left" onMouseDown={handleMoveStart} />
+				<div class="center" style={props.style}>
+					{props.childComponent}
+					{/* not working 0__o
           <For each={props.children}>{childComponent => {
             console.log(`leaf child`, childComponent)
             return childComponent;
           }}</For>
           */}
-        </div>
-        <div class="frame right" onMouseDown={handleMoveStart} />
-      </div>
+				</div>
+				<div class="frame right" onMouseDown={handleMoveStart} />
+			</div>
 
-      <div class="bottom">
-        <div class="frame left" onMouseDown={handleMoveStart} />
-        <div class="frame center" onMouseDown={handleMoveStart} />
-        <div class="frame right" onMouseDown={handleMoveStart} />
-      </div>
-    </div>
-  );
+			<div class="bottom">
+				<div class="frame left" onMouseDown={handleMoveStart} />
+				<div class="frame center" onMouseDown={handleMoveStart} />
+				<div class="frame right" onMouseDown={handleMoveStart} />
+			</div>
+		</div>
+	)
 }
-
-
 
 // TODO better way to define style?
 // we need `node.classList.toggle('expand')`
@@ -508,9 +474,7 @@ globalStyle(`
     border-left: none;
   }
 
-`);
-
-
+`)
 
 // user style
 globalStyle(`
@@ -544,5 +508,4 @@ globalStyle(`
   .split-horizontal.custom-row-container {
     color: orange;
   }
-`);
-
+`)

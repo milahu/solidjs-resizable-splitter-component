@@ -5,6 +5,7 @@
 	"module": "src/splitter.jsx",
 	"scripts": {
 		"demo": "cd demo/src/src && npm install && npm run dev",
+		"format": "prettier . --write",
 		"prepare": "husky install"
 	},
 	"devDependencies": {
