@@ -1,27 +1,48 @@
 {
-  "name": "solidjs-resizable-splitter-component",
-  "version": "0.0.1",
-  "description": "resizable splitter component for SolidJS",
-  "module": "src/splitter.jsx",
-  "dependencies": {
-    "solid-styled-components": "*"
-  },
-  "peerDependencies": {
-    "solid-js": "*"
-  },
-  "keywords": [
-    "solid",
-    "solid-js",
-    "solidjs",
-    "component",
-    "splitter",
-    "layout",
-    "resizable"
-  ],
-  "author": "milahu",
-  "license": "CC0-1.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/milahu/solidjs-resizable-splitter-component.git"
-  }
+	"name": "solidjs-resizable-splitter-component",
+	"version": "0.0.1",
+	"description": "resizable splitter component for SolidJS",
+	"module": "src/splitter.jsx",
+	"scripts": {
+		"demo": "cd demo/src/src && npm install && npm run dev",
+		"format": "prettier . --write",
+		"test": "prettier . --check",
+		"prepare": "husky install"
+	},
+	"devDependencies": {
+		"husky": "^8.0.1",
+		"lint-staged": "^13.0.3",
+		"prettier": "^2.7.1"
+	},
+	"dependencies": {},
+	"peerDependencies": {
+		"solid-js": "*"
+	},
+	"lint-staged": {
+		"*.*": [
+			"echo TODO run tests on commit: npm test #"
+		],
+		"*.{ts,tsx,js}": [
+			"echo TODO eslint",
+			"prettier --write"
+		],
+		"*.{css,md,graphql,yml,yaml,json}": [
+			"prettier --write"
+		]
+	},
+	"keywords": [
+		"solid",
+		"solid-js",
+		"solidjs",
+		"component",
+		"splitter",
+		"layout",
+		"resizable"
+	],
+	"author": "milahu",
+	"license": "CC0-1.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/milahu/solidjs-resizable-splitter-component.git"
+	}
 }

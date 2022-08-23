@@ -1,0 +1,2 @@
+# use the same line ending in *nix and windows. This prevents Prettier's format check in our test script from failing on Windows.
+* text=auto eol=lf
