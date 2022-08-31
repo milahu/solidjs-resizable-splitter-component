@@ -265,6 +265,11 @@ function SplitItem(props) {
 			for (let [index, node] of containerChildren.entries()) {
 				const amount = (node_size_new[index] / size_sum) * 100 + '%'
 				node.style.flexBasis = amount
+
+				// TODO this needs to be applied initially too, depending on the
+				// number of panels. Currently it is not applied initially, only
+				// on drag. If there are three initial panels, they need to
+				// start at 33% each, etc.
 				if (node.parentElement.classList.contains('split-horizontal')) node.style.width = amount
 				else if (node.parentElement.classList.contains('split-vertical')) node.style.height = amount
 			}
