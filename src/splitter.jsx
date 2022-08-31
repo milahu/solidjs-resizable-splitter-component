@@ -263,16 +263,12 @@ function SplitItem(props) {
 			node_size_new[index_after] -= moveDiff
 			// set cell size
 			for (let [index, node] of containerChildren.entries()) {
-				node.style.flexBasis = (node_size_new[index] / size_sum) * 100 + '%'
+				const amount = (node_size_new[index] / size_sum) * 100 + '%'
+				node.style.flexBasis = amount
+				if (node.parentElement.classList.contains('split-horizontal')) node.style.width = amount
+				else if (node.parentElement.classList.contains('split-vertical')) node.style.height = amount
 			}
 		}
-		return
-		console.log(
-			'size old:',
-			debugParent(activeMoveParent, [activeMoveSizeKey]),
-			'=',
-			debugParent(activeMoveParent, ['style', 'flexBasis']),
-		)
 	}
 
 	// csd: CSSStyleDeclaration
