@@ -10,20 +10,30 @@ FIXME resizer element is not visible
 
 import {createMemo, onCleanup, onMount, For, children} from 'solid-js'
 
+export function SplitRoot(props) {
+	// note: you also need this CSS:
+	// html, body, #root { height: 100%; margin: 0; }
+	return (
+		<div class="split-root" style="display:flex; height: 100%">
+			{props.children}
+		</div>
+	)
+}
+
 // vertical splitter = flex-direction: column
 export function SplitY(props) {
 	return (
 		<div
 			class={['split-vertical', props.reverse ? 'layout-reverse' : ''].join(' ')}
 			style={{
-				width: '100%',
-				height: '100%',
+				'flex-grow': 1,
 				overflow: 'auto',
 				...(props.style || {}),
 			}}
 		>
 			<For each={props.children}>
 				{childComponent => {
+					//console.log('SplitY childComponent', typeof(childComponent), childComponent);
 					if (
 						childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
 						childComponent instanceof Element && // guard against non-Elements, or else runtime errors
@@ -47,14 +57,14 @@ export function SplitX(props) {
 		<div
 			class={['split-horizontal', props.reverse ? 'layout-reverse' : ''].join(' ')}
 			style={{
-				width: '100%',
-				height: '100%',
+				'flex-grow': 1,
 				overflow: 'auto',
 				...(props.style || {}),
 			}}
 		>
 			<For each={props.children}>
 				{childComponent => {
+					//console.log('SplitX childComponent', typeof(childComponent), childComponent);
 					if (
 						childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
 						childComponent instanceof Element && // guard against non-Elements, or else runtime errors
@@ -296,7 +306,7 @@ export function SplitItem(props) {
 			// move style from child to wrapper
 			// to keep the child style, wrap the child in a <div>
 			childStyle = objectOfStyleDeclaration(el.style)
-			el.style = null
+			el.style = null // FIXME el.style is read only?
 		}
 
 		return childStyle
@@ -306,6 +316,7 @@ export function SplitItem(props) {
 	const getChildren = children(() => props.children);
 
 	return (
+		// @ts-ignore
 		<div
 			class="layout-cell"
 			style={{
