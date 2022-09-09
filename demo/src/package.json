@@ -11,7 +11,7 @@
 		"vite-plugin-solid": "*"
 	},
 	"devDependencies": {
-		"solidjs-resizable-splitter-component": "file:../..",
+		"solidjs-resizable-splitter-component": "link:../..",
 		"vite": "*",
 		"vite-plugin-solid": "*"
 	},
