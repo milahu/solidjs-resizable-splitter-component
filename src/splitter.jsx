@@ -4,8 +4,6 @@ https://github.com/milahu/svelte-layout-resizable/blob/master/src/Layout.svelte
 
 TODO make it more like
 https://github.com/solidjs/solid-playground/blob/master/src/components/gridResizer/gridResizer.tsx
-
-FIXME resizer element is not visible
 */
 
 import {createMemo, onCleanup, onMount, For, children} from 'solid-js'
@@ -13,8 +11,9 @@ import {createMemo, onCleanup, onMount, For, children} from 'solid-js'
 export function SplitRoot(props) {
 	// note: you also need this CSS:
 	// html, body, #root { height: 100%; margin: 0; }
+	// TODO pass data-split-resize-debounce to children
 	return (
-		<div class="split-root" style="display:flex; height: 100%">
+		<div class="split-root" data-split-resize-debounce={() => (props.resizeDebounce || 0)} style="display:flex; height: 100%">
 			{props.children}
 		</div>
 	)
@@ -102,14 +101,26 @@ export function SplitItem(props) {
 	let activeMoveParent = null
 	let activeMoveParentOverflow = ''
 	//let isMoving = false;
+	let moveStartX = 0
+	let moveStartY = 0
 	let activeMoveOrigin = null // TODO rename to activeMoveHandle
 	let parentIsLayoutVertical = null
 	let activeMoveCell = null
 	let activeMoveCell_real = null // TODO rename
 	let activeMoveSizeKey = ''
 
+	// TODO expose option
+	// TODO debounce by default, for example 100ms
+	var resizeDebounce = 0 // live resize
+	//var resizeDebounce = 9999 // late resize
+
+	const showResizeHandle = (resizeDebounce > 0)
+	const liveResize = (resizeDebounce == 0)
+
 	function handleMoveStart(event) {
 		const tar = event.target
+		moveStartX = event.clientX
+		moveStartY = event.clientY
 		activeMoveOrigin = tar
 		activeMoveCell = tar.parentNode.parentNode
 		const hcl = activeMoveOrigin.classList
@@ -122,6 +133,7 @@ export function SplitItem(props) {
 		const handleLeft = hcl.contains('left')
 		const handleTop = hpcl.contains('top')
 		const handleBottom = hpcl.contains('bottom')
+		//console.log(`handleLeft=${handleLeft} handleRight=${handleRight} handleTop=${handleTop} handleBottom=${handleBottom}`)
 		const activeMoveParentClass = handleLeft || handleRight ? 'split-horizontal' : 'split-vertical'
 		const sizeKeyPrefix = 'offset' // all the same?
 		activeMoveSizeKey = activeMoveParentClass == 'split-vertical' ? sizeKeyPrefix + 'Height' : sizeKeyPrefix + 'Width'
@@ -144,52 +156,80 @@ export function SplitItem(props) {
 		// use hidden css class to save other components
 		document.body.classList.add('--layout-is-moving')
 
-		// FIXME resizer element is not visible
-		activeMoveElement = tar.cloneNode(true)
-		const newStyle = activeMoveElement.style
-		newStyle.position = 'absolute'
-		newStyle.zIndex = 10 // force to front layer
-		document.body.appendChild(activeMoveElement)
-		activeMoveParentOverflow = activeMoveParent.style.overflow
-		activeMoveParent.style.overflow = 'hidden'
+		let newStyle
+		if (showResizeHandle) {
+			activeMoveElement = tar.cloneNode(true)
+			//console.log('activeMoveElement', activeMoveElement)
+			newStyle = activeMoveElement.style
+			newStyle.position = 'absolute'
+			newStyle.zIndex = 10 // force to front layer
+			document.body.appendChild(activeMoveElement)
+			activeMoveParentOverflow = activeMoveParent.style.overflow
+			activeMoveParent.style.overflow = 'hidden'
+			//newStyle.backgroundColor = 'red' // debug
+		}
+
 		// TODO verify. is this a good idea?
 		// we want to avoid scrollbars on resize
-		const handle_size = 1
+		const handle_size = 5 // TODO sync with css variable --handleSize
 		if (activeMoveParentClass == 'split-vertical') {
 			// parent is split-vertical
 			// handleTop || handleBottom
 			parentIsLayoutVertical = true
 			//console.log('add marginTop', (handleTop ? tar.offsetHeight : 0));
-			newStyle.marginTop = tar.offsetTop - (handleTop ? tar.offsetHeight : 0) + handle_size / 2 - event.clientY + 'px'
-			newStyle.left = activeMoveParent.offsetLeft + 'px'
-			newStyle.top = event.clientY + 'px'
-			// will change in move handler
-			newStyle.height = tar.offsetHeight + 'px'
-			newStyle.width = activeMoveParent.offsetWidth + 'px'
-			activeMoveElement.className = 'split-vertical-resizer'
-			activeMoveListener = function (event) {
-				// optimized hot code
-				newStyle.top = event.clientY + 'px'
-
-				calcLayout(event)
+			if (liveResize) {
+				// live resize
+				activeMoveListener = calcLayout // hot code!
 			}
-		} else {
+			// TODO debounced resize: live move splitter + resize content every 100ms or so
+			else {
+				// FIXME handle position is wrong
+				//console.log(`event.clientY=${event.clientY} tar.offsetTop=${tar.offsetTop} tar.offsetHeight=${tar.offsetHeight} handle_size=${handle_size}`)
+				// late resize: live move splitter
+				activeMoveElement.className = 'split-vertical-resizer'
+				// event.clientY - tar.offsetTop > 0 // always
+				const handlePadding = 10 // note: only on one side: top or left. not bottom. not right
+				//newStyle.marginTop = (tar.offsetTop - (handleBottom ? tar.offsetHeight : 0) + handle_size / 2 - event.clientY) + 'px'
+				newStyle.marginTop = (tar.offsetTop - event.clientY - handlePadding) + 'px'
+				//console.log('newStyle.marginTop', newStyle.marginTop)
+				newStyle.left = activeMoveParent.offsetLeft + 'px'
+				newStyle.top = event.clientY + 'px'
+				//newStyle.outline = 'solid 1px red' // debug
+				// will change in move handler
+				newStyle.height = tar.offsetHeight + 'px'
+				newStyle.width = activeMoveParent.offsetWidth + 'px'
+				activeMoveListener = function (event) {
+					newStyle.top = event.clientY + 'px' // optimized hot code
+					//calcLayout(event)
+				}
+			}
+		}
+		else {
 			// parent is split-horizontal
 			// handleLeft || handleRight
 			parentIsLayoutVertical = false
-			activeMoveElement.className = 'split-horizontal-resizer'
-			//console.log('add marginLeft', (handleLeft ? tar.offsetWidth : 0));
-			newStyle.marginLeft = tar.offsetLeft - (handleLeft ? tar.offsetWidth : 0) + handle_size / 2 - event.clientX + 'px'
-			newStyle.top = activeMoveParent.offsetTop + 'px'
-			newStyle.left = event.clientX + 'px'
-			// will change in move handler
-			newStyle.height = activeMoveParent.offsetHeight + 'px'
-			newStyle.width = tar.offsetWidth + 'px'
-			activeMoveListener = function (event) {
-				// optimized hot code
+			if (liveResize) {
+				// hot code!
+				activeMoveListener = calcLayout
+			}
+			// TODO debounced resize: live move splitter + resize content every 100ms or so
+			else {
+				// late resize: live move splitter
+				activeMoveElement.className = 'split-horizontal-resizer'
+				// event.clientY - tar.offsetTop > 0 // always
+				const handlePadding = 10 // note: only on one side: top or left. not bottom. not right
+				//newStyle.marginLeft = (tar.offsetLeft - (handleLeft ? tar.offsetWidth : 0) + handle_size / 2 - event.clientX) + 'px'
+				newStyle.marginLeft = (tar.offsetLeft - event.clientX - handlePadding) + 'px'
+				//console.log('newStyle.marginLeft', newStyle.marginLeft)
+				newStyle.top = activeMoveParent.offsetTop + 'px'
 				newStyle.left = event.clientX + 'px'
-
-				calcLayout(event)
+				// will change in move handler
+				newStyle.height = activeMoveParent.offsetHeight + 'px'
+				newStyle.width = tar.offsetWidth + 'px'
+				activeMoveListener = function (event) {
+					// optimized hot code
+					newStyle.left = event.clientX + 'px'
+				}
 			}
 		}
 		document.addEventListener('pointermove', activeMoveListener)
@@ -216,9 +256,12 @@ export function SplitItem(props) {
 	function handleMoveEnd(event) {
 		if (!activeMoveListener) return
 		document.body.classList.remove('--layout-is-moving')
-		document.body.removeChild(activeMoveElement)
-		activeMoveElement = null
-		activeMoveParent.style.overflow = activeMoveParentOverflow
+		if (showResizeHandle) {
+			// debug: remove next line to keep the handle elements in DOM
+			document.body.removeChild(activeMoveElement)
+			activeMoveElement = null
+			activeMoveParent.style.overflow = activeMoveParentOverflow
+		}
 		document.removeEventListener('pointermove', activeMoveListener)
 		activeMoveListener = null
 
@@ -248,7 +291,17 @@ export function SplitItem(props) {
 		const handleLeft = hcl.contains('left')
 		const handleTop = hpcl.contains('top')
 		const handleBottom = hpcl.contains('bottom')
-		const moveDiff = parentIsLayoutVertical ? event.movementY : event.movementX
+		// i assume that absolute pointer positions
+		// are more reliable than relative positions.
+		// also, absolute positions are needed for "late resize"
+		//const moveDiff = parentIsLayoutVertical ? event.movementY : event.movementX
+		const moveDiffX = event.clientX - moveStartX
+		const moveDiffY = event.clientY - moveStartY
+		const moveDiff = parentIsLayoutVertical ? moveDiffY : moveDiffX
+		if (liveResize) {
+			moveStartX = event.clientX
+			moveStartY = event.clientY
+		}
 		if (
 			(activeMoveCell_real == firstChild && (handleLeft || handleTop)) ||
 			(activeMoveCell_real == lastChild && (handleRight || handleBottom))
@@ -325,9 +378,9 @@ export function SplitItem(props) {
 			}}
 		>
 			<div class="top">
-				<div class="frame left" onpointerdown={handleMoveStart} />
+				<div class="frame left" />
 				<div class="frame center" onpointerdown={handleMoveStart} />
-				<div class="frame right" onpointerdown={handleMoveStart} />
+				<div class="frame right" />
 			</div>
 
 			<div class="middle">
@@ -339,9 +392,9 @@ export function SplitItem(props) {
 			</div>
 
 			<div class="bottom">
-				<div class="frame left" onpointerdown={handleMoveStart} />
+				<div class="frame left" />
 				<div class="frame center" onpointerdown={handleMoveStart} />
-				<div class="frame right" onpointerdown={handleMoveStart} />
+				<div class="frame right" />
 			</div>
 		</div>
 	)
