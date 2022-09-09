@@ -378,7 +378,9 @@ globalStyle(/*css*/ `
     padding-top: var(--handlePadding);
     /*margin-top: var(--handleMargin);*/
 		pointer-events: none;
+		/* why?
 		display: none;
+		*/
   }
   .split-horizontal-resizer {
     width: var(--handleSize) !important;
@@ -393,7 +395,9 @@ globalStyle(/*css*/ `
     padding-left: var(--handlePadding);
     /*margin-left: var(--handleMargin);*/
 		pointer-events: none;
+		/* why?
 		display: none;
+		*/
   }
   body.--layout-is-moving,
   body.--layout-is-moving * {
