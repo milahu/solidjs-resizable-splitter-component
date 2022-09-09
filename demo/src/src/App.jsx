@@ -1,21 +1,39 @@
-import {SplitY, SplitX, SplitItem} from 'solidjs-resizable-splitter-component'
+import {SplitRoot, SplitY, SplitX, SplitItem} from 'solidjs-resizable-splitter-component'
 
 export function App(props) {
 	return (
-		<div style="height: 100%">
-			<SplitY>
-				<SplitX>
-					<SplitItem>Y1 X1</SplitItem>
-					<SplitY>
-						{/* you can mix <SplitItem> with other elements, for example <div> */}
-						<SplitItem>Y1 X2 Y1</SplitItem>
-						<div>Y1 X2 Y2</div>
-						<div>Y1 X2 Y3</div>
-					</SplitY>
-				</SplitX>
-				<div>Y2</div>
-			</SplitY>
-
+		<SplitRoot>
+			<SplitX>
+				<SplitItem>
+					aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa
+					aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa
+					aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa
+				</SplitItem>
+				<SplitY>
+					<SplitItem>
+						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
+						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
+						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
+					</SplitItem>
+					<SplitItem>
+						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
+						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
+						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
+					</SplitItem>
+					<SplitX>
+						<SplitItem>
+							cccccccccccccc cccccccccccccc cccccccccccccc
+							cccccccccccccc cccccccccccccc cccccccccccccc
+							cccccccccccccc cccccccccccccc cccccccccccccc
+						</SplitItem>
+						<SplitItem>
+							cccccccccccccc cccccccccccccc cccccccccccccc
+							cccccccccccccc cccccccccccccc cccccccccccccc
+							cccccccccccccc cccccccccccccc cccccccccccccc
+						</SplitItem>
+					</SplitX>
+				</SplitY>
+			</SplitX>
 			<style>{
 				/*css*/ `
 					.content {
@@ -25,6 +43,6 @@ export function App(props) {
 					}
 				`
 			}</style>
-		</div>
+		</SplitRoot>
 	)
 }
