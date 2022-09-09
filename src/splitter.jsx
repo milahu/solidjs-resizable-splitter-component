@@ -451,10 +451,12 @@ globalStyle(/*css*/ `
   .bottom { background-color: red }
   .bottom > .left { background-color: orange }
   */
+	/* not implemented
   .top > .left { cursor: nw-resize }
   .top > .right { cursor: ne-resize }
   .bottom > .right { cursor: se-resize }
   .bottom > .left { cursor: sw-resize }
+	*/
   .center, .middle { flex-grow: 1; }
   .top, .middle, .bottom {
     display: flex;
