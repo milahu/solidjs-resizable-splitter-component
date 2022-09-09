@@ -1,18 +1,19 @@
-import {SplitY, SplitX} from 'solidjs-resizable-splitter-component'
+import {SplitY, SplitX, SplitItem} from 'solidjs-resizable-splitter-component'
 
 export function App(props) {
 	return (
 		<div style="height: 100%">
 			<SplitY>
 				<SplitX>
-					<div class="content">Y1 X1</div>
+					<SplitItem>Y1 X1</SplitItem>
 					<SplitY>
-						<div class="content">Y1 X2 Y1</div>
-						<div class="content">Y1 X2 Y2</div>
-						<div class="content">Y1 X2 Y3</div>
+						{/* you can mix <SplitItem> with other elements, for example <div> */}
+						<SplitItem>Y1 X2 Y1</SplitItem>
+						<div>Y1 X2 Y2</div>
+						<div>Y1 X2 Y3</div>
 					</SplitY>
 				</SplitX>
-				<div class="content">Y2</div>
+				<div>Y2</div>
 			</SplitY>
 
 			<style>{

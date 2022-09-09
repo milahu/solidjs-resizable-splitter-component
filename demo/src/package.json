@@ -5,8 +5,13 @@
 		"dev": "vite --clearScreen false",
 		"build": "vite build"
 	},
-	"devDependencies": {
+	"_TODO_devDependencies": {
 		"solidjs-resizable-splitter-component": "github:milahu/solidjs-resizable-splitter-component",
+		"vite": "*",
+		"vite-plugin-solid": "*"
+	},
+	"devDependencies": {
+		"solidjs-resizable-splitter-component": "file:../..",
 		"vite": "*",
 		"vite-plugin-solid": "*"
 	},

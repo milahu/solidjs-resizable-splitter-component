@@ -8,7 +8,7 @@ https://github.com/solidjs/solid-playground/blob/master/src/components/gridResiz
 FIXME resizer element is not visible
 */
 
-import {createMemo, onCleanup, onMount, For} from 'solid-js'
+import {createMemo, onCleanup, onMount, For, children} from 'solid-js'
 
 // vertical splitter = flex-direction: column
 export function SplitY(props) {
@@ -25,16 +25,16 @@ export function SplitY(props) {
 			<For each={props.children}>
 				{childComponent => {
 					if (
+						childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
 						childComponent instanceof Element && // guard against non-Elements, or else runtime errors
-						(childComponent.classList.contains('split-vertical') ||
-							childComponent.classList.contains('split-horizontal'))
+						(
+							childComponent.classList.contains('split-vertical') ||
+							childComponent.classList.contains('split-horizontal')
+						)
 					) {
-						//console.log(`branch node`, childComponent)
 						return childComponent
 					}
-					//console.log(`leaf node`, childComponent)
-					//return <SplitItem>{childComponent}</SplitItem>; // not working 0__o
-					return <SplitItem childComponent={childComponent} />
+					return <SplitItem>{childComponent}</SplitItem>
 				}}
 			</For>
 		</div>
@@ -56,16 +56,16 @@ export function SplitX(props) {
 			<For each={props.children}>
 				{childComponent => {
 					if (
-						childComponent.classList &&
-						(childComponent.classList.contains('split-vertical') ||
-							childComponent.classList.contains('split-horizontal'))
+						childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
+						childComponent instanceof Element && // guard against non-Elements, or else runtime errors
+						(
+							childComponent.classList.contains('split-vertical') ||
+							childComponent.classList.contains('split-horizontal')
+						)
 					) {
-						//console.log(`branch node`, childComponent)
 						return childComponent
 					}
-					//console.log(`leaf node`, childComponent)
-					//return <SplitItem>{childComponent}</SplitItem>; // not working 0__o
-					return <SplitItem childComponent={childComponent} />
+					return <SplitItem>{childComponent}</SplitItem>
 				}}
 			</For>
 		</div>
@@ -73,7 +73,7 @@ export function SplitX(props) {
 }
 
 // item = a leaf node in the layout tree
-function SplitItem(props) {
+export function SplitItem(props) {
 	onMount(() => {
 		// TODO disallow multiple pointers (f.e. multiple fingers)
 		document.body.addEventListener('pointerup', handleMoveEnd)
@@ -302,6 +302,9 @@ function SplitItem(props) {
 		return childStyle
 	})
 
+	// https://www.solidjs.com/tutorial/props_children
+	const getChildren = children(() => props.children);
+
 	return (
 		<div
 			class="layout-cell"
@@ -319,13 +322,7 @@ function SplitItem(props) {
 			<div class="middle">
 				<div class="frame left" onpointerdown={handleMoveStart} />
 				<div class="center" style={props.style}>
-					{props.childComponent}
-					{/* not working 0__o
-          <For each={props.children}>{childComponent => {
-            console.log(`leaf child`, childComponent)
-            return childComponent;
-          }}</For>
-          */}
+					{getChildren()}
 				</div>
 				<div class="frame right" onpointerdown={handleMoveStart} />
 			</div>
