@@ -6,7 +6,7 @@ TODO make it more like
 https://github.com/solidjs/solid-playground/blob/master/src/components/gridResizer/gridResizer.tsx
 */
 
-import {createMemo, onCleanup, onMount, For, children} from 'solid-js'
+import {createMemo, onCleanup, onMount, For, children, createEffect} from 'solid-js'
 
 export function SplitRoot(props) {
 	// note: you also need this CSS:
@@ -19,8 +19,35 @@ export function SplitRoot(props) {
 	)
 }
 
+// TODO refactor SplitY + SplitX
+// only difference is the class name
+// SplitY: class = split-vertical
+// SplitX: class = split-horizontal
+
 // vertical splitter = flex-direction: column
 export function SplitY(props) {
+	// https://www.solidjs.com/tutorial/props_children
+	const getChildren = children(() => {
+		//console.log('SplitY: props.children', props.children);
+		const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
+		return getChildArray.map(getChild => {
+			const childComponent = getChild();
+			//console.log('SplitY: childComponent', childComponent);
+			//console.log('SplitY childComponent', typeof(childComponent), childComponent);
+			if (
+				childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
+				childComponent instanceof Element && // guard against non-Elements, or else runtime errors
+				(
+					childComponent.classList.contains('layout-cell') ||
+					childComponent.classList.contains('split-vertical') ||
+					childComponent.classList.contains('split-horizontal')
+				)
+			) {
+				return childComponent
+			}
+			return <SplitItem>{childComponent}</SplitItem>
+		});
+	});
 	return (
 		<div
 			class={['split-vertical', props.reverse ? 'layout-reverse' : ''].join(' ')}
@@ -30,28 +57,35 @@ export function SplitY(props) {
 				...(props.style || {}),
 			}}
 		>
-			<For each={props.children}>
-				{childComponent => {
-					//console.log('SplitY childComponent', typeof(childComponent), childComponent);
-					if (
-						childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
-						childComponent instanceof Element && // guard against non-Elements, or else runtime errors
-						(
-							childComponent.classList.contains('split-vertical') ||
-							childComponent.classList.contains('split-horizontal')
-						)
-					) {
-						return childComponent
-					}
-					return <SplitItem>{childComponent}</SplitItem>
-				}}
-			</For>
+			{getChildren()}
 		</div>
 	)
 }
 
 // horizontal splitter = flex-direction: row
 export function SplitX(props) {
+	// https://www.solidjs.com/tutorial/props_children
+	const getChildren = children(() => {
+		//console.log('SplitY: props.children', props.children);
+		const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
+		return getChildArray.map(getChild => {
+			const childComponent = getChild();
+			//console.log('SplitY: childComponent', childComponent);
+			//console.log('SplitY childComponent', typeof(childComponent), childComponent);
+			if (
+				childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
+				childComponent instanceof Element && // guard against non-Elements, or else runtime errors
+				(
+					childComponent.classList.contains('layout-cell') ||
+					childComponent.classList.contains('split-vertical') ||
+					childComponent.classList.contains('split-horizontal')
+				)
+			) {
+				return childComponent
+			}
+			return <SplitItem>{childComponent}</SplitItem>
+		});
+	});
 	return (
 		<div
 			class={['split-horizontal', props.reverse ? 'layout-reverse' : ''].join(' ')}
@@ -61,22 +95,7 @@ export function SplitX(props) {
 				...(props.style || {}),
 			}}
 		>
-			<For each={props.children}>
-				{childComponent => {
-					//console.log('SplitX childComponent', typeof(childComponent), childComponent);
-					if (
-						childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
-						childComponent instanceof Element && // guard against non-Elements, or else runtime errors
-						(
-							childComponent.classList.contains('split-vertical') ||
-							childComponent.classList.contains('split-horizontal')
-						)
-					) {
-						return childComponent
-					}
-					return <SplitItem>{childComponent}</SplitItem>
-				}}
-			</For>
+			{getChildren()}
 		</div>
 	)
 }
