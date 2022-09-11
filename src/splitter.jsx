@@ -31,11 +31,15 @@ export function SplitY(props) {
 		//console.log('SplitY: props.children', props.children);
 		const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
 		return getChildArray.map(getChild => {
-			const childComponent = getChild();
+
+			// fix: Uncaught TypeError: getChild is not a function
+			//const childComponent = getChild();
+			//console.log('getChild', typeof(getChild), getChild);
+			const childComponent = (getChild instanceof Function) ? getChild() : getChild;
+
 			//console.log('SplitY: childComponent', childComponent);
 			//console.log('SplitY childComponent', typeof(childComponent), childComponent);
 			if (
-				childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
 				childComponent instanceof Element && // guard against non-Elements, or else runtime errors
 				(
 					childComponent.classList.contains('layout-cell') ||
@@ -69,11 +73,15 @@ export function SplitX(props) {
 		//console.log('SplitY: props.children', props.children);
 		const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
 		return getChildArray.map(getChild => {
-			const childComponent = getChild();
+
+			// fix: Uncaught TypeError: getChild is not a function
+			//const childComponent = getChild();
+			//console.log('getChild', typeof(getChild), getChild);
+			const childComponent = (getChild instanceof Function) ? getChild() : getChild;
+
 			//console.log('SplitY: childComponent', childComponent);
 			//console.log('SplitY childComponent', typeof(childComponent), childComponent);
 			if (
-				childComponent instanceof Function || // child is layout-cell. avoid double-wrapping
 				childComponent instanceof Element && // guard against non-Elements, or else runtime errors
 				(
 					childComponent.classList.contains('layout-cell') ||
