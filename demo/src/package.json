@@ -3,6 +3,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite --clearScreen false",
+		"serve": "vite preview",
 		"build": "vite build"
 	},
 	"_TODO_devDependencies": {

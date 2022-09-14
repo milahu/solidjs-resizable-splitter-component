@@ -5,6 +5,7 @@ export default defineConfig({
 	plugins: [solidPlugin()],
 	build: {
 		target: 'esnext',
+		minify: false, // smaller git diffs
 		polyfillDynamicImport: false,
 		// constant asset names https://github.com/vitejs/vite/issues/378
 		rollupOptions: {
