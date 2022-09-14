@@ -14,18 +14,24 @@ export function SplitRoot(props) {
 	// TODO pass data-split-resize-debounce to children
 	let ref
 	onMount(() => {
-		if (ref.parentNode.style.display == 'flex') {
-			ref.style['flex-grow'] = '1'
-		}
-		else {
-			ref.style['height'] = '100%'
-		}
+		// setTimeout workaround for error in production build:
+		// TypeError: Cannot read properties of undefined (reading 'parentNode')
+		setTimeout(() => {
+			const cs = window.getComputedStyle(ref.parentNode, null);
+			const display = cs.getPropertyValue("display");
+			//console.log(`SplitRoot parent style display`, display)
+			// default is (display == 'block')
+			if (display == 'flex') {
+				ref.style['flex-grow'] = '1'
+				ref.style['height'] = ''
+			}
+		})
 	})
 	return (
 		<div
 			ref={ref}
 			class="split-root"
-			style="display:flex"
+			style="height:100%; display:flex"
 		>
 			{props.children}
 		</div>
