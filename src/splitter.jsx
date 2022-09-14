@@ -9,11 +9,24 @@ https://github.com/solidjs/solid-playground/blob/master/src/components/gridResiz
 import {createMemo, onCleanup, onMount, For, children, createEffect} from 'solid-js'
 
 export function SplitRoot(props) {
-	// note: you also need this CSS:
+	// note: to use the full browser window, you also need this style:
 	// html, body, #root { height: 100%; margin: 0; }
 	// TODO pass data-split-resize-debounce to children
+	let ref
+	onMount(() => {
+		if (ref.parentNode.style.display == 'flex') {
+			ref.style['flex-grow'] = '1'
+		}
+		else {
+			ref.style['height'] = '100%'
+		}
+	})
 	return (
-		<div class="split-root" data-split-resize-debounce={() => (props.resizeDebounce || 0)} style="display:flex; height: 100%">
+		<div
+			ref={ref}
+			class="split-root"
+			style="display:flex"
+		>
 			{props.children}
 		</div>
 	)
