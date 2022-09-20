@@ -5,8 +5,8 @@
 	"module": "src/splitter.jsx",
 	"scripts": {
 		"demo": "cd demo && npm install && npm run dev",
-		"format": "prettier . --write",
-		"test": "prettier . --check"
+		"prettywrite": "prettier . --write",
+		"pretty": "prettier . --check"
 	},
 	"devDependencies": {
 		"lint-staged": "^13.0.3",
