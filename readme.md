@@ -2,7 +2,7 @@
 
 A component that allows splitting an area into multiple horizontal or vertical resizable panels.
 
-# Demo
+## Demo
 
 See a [live demo](https://milahu.github.io/solidjs-resizable-splitter-component/).
 
@@ -13,7 +13,7 @@ npm install
 npm run demo
 ```
 
-# Install
+## Install
 
 Not currently published to NPM, install from git for now by adding the following to your `dependencies` in `package.json`:
 
@@ -39,7 +39,7 @@ may need to configure your tool (f.e. [Webpack](https://webpack.js.org/) with
 `node_modules/solidjs-resizable-splitter-component` because those files are not
 plain JavaScript.
 
-# Usage
+## Usage
 
 Make a split and resizeable layout by importing the `SlitX` and `SplitY`
 components from the lib and using them in your markup:
@@ -66,6 +66,6 @@ export function App(props) {
 }
 ```
 
-# Related
+## Related
 
 * based on https://github.com/milahu/svelte-layout-resizable
