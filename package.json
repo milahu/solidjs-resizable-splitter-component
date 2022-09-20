@@ -4,7 +4,7 @@
 	"description": "resizable splitter component for SolidJS",
 	"module": "src/splitter.jsx",
 	"scripts": {
-		"demo": "cd demo/src/src && npm install && npm run dev",
+		"demo": "cd demo && npm install && npm run dev",
 		"format": "prettier . --write",
 		"test": "prettier . --check",
 		"prepare": "husky install"
