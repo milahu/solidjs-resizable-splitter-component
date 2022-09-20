@@ -1,4 +1,5 @@
-import {SplitRoot, SplitY, SplitX, SplitItem} from 'solidjs-resizable-splitter-component'
+import { SplitRoot, SplitY, SplitX, SplitItem } from 'solidjs-resizable-splitter-component'
+//import { SplitRoot, SplitY, SplitX, SplitItem } from './solidjs-resizable-splitter-component/src/splitter.jsx'
 
 export function App(props) {
 	return (
