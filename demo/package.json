@@ -6,13 +6,8 @@
 		"serve": "vite preview",
 		"build": "vite build"
 	},
-	"_TODO_devDependencies": {
-		"solidjs-resizable-splitter-component": "github:milahu/solidjs-resizable-splitter-component",
-		"vite": "*",
-		"vite-plugin-solid": "*"
-	},
 	"devDependencies": {
-		"solidjs-resizable-splitter-component": "link:../..",
+		"solidjs-resizable-splitter-component": "github:milahu/solidjs-resizable-splitter-component",
 		"vite": "*",
 		"vite-plugin-solid": "*"
 	},
