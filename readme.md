@@ -65,3 +65,7 @@ export function App(props) {
 	)
 }
 ```
+
+# Related
+
+* based on https://github.com/milahu/svelte-layout-resizable
