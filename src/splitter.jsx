@@ -418,7 +418,10 @@ export function SplitItem(props) {
 		<div
 			class="layout-cell"
 			style={{
-				'flex-grow': 1,
+				//'flex-grow': 1,
+				//'flex-shrink': 0,
+				//'flex-basis': props.size || 'auto',
+				'flex': '1 0 ' + (props.size || 'auto'),
 				...childStyle(),
 			}}
 		>
