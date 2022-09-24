@@ -25,6 +25,9 @@ export function SplitRoot(props) {
 				ref.style['flex-grow'] = '1'
 				ref.style['height'] = ''
 			}
+			//console.log(`SplitRoot onMount: ref`, ref)
+			//console.log(`SplitRoot onMount: calling initSizeChildren`)
+			initSizeChildren(ref.children)
 		})
 	})
 	return (
@@ -45,11 +48,17 @@ export function SplitRoot(props) {
 
 // vertical splitter = flex-direction: column
 export function SplitY(props) {
+	let ref
+	onMount(() => {
+		//console.log(`SplitY onMount: ref`, ref)
+		//console.log(`SplitY onMount: calling initSizeChildren`)
+		initSizeChildren(ref.children)
+	})
 	// https://www.solidjs.com/tutorial/props_children
 	const getChildren = children(() => {
 		//console.log('SplitY: props.children', props.children);
 		const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
-		return getChildArray.map(getChild => {
+		const children = getChildArray.map(getChild => {
 
 			// fix: Uncaught TypeError: getChild is not a function
 			//const childComponent = getChild();
@@ -70,12 +79,15 @@ export function SplitY(props) {
 			}
 			return <SplitItem>{childComponent}</SplitItem>
 		});
+		//initSizeChildren(children);
+		return children;
 	});
 	return (
 		<div
+			ref={ref}
 			class={['split-vertical', props.reverse ? 'layout-reverse' : ''].join(' ')}
 			style={{
-				'flex-grow': 1,
+				'flex': '1 0 ' + (props.size || 'auto'),
 				overflow: 'auto',
 				...(props.style || {}),
 			}}
@@ -85,13 +97,55 @@ export function SplitY(props) {
 	)
 }
 
+
+
+// calculate initial sizes
+// flex does this wrong
+// example: 2 children:
+//   <div size="50%">1</div>
+//   <div>2</div>
+// -> 1 is larger, but both should have 50%
+// TODO cleanup
+
+function initSizeChildren(children) {
+
+	children = Array.from(children)
+	const childSizeList = children.map(child => child.style.flexBasis || 'auto')
+	const declaredSizeList = childSizeList.filter(size => size != 'auto')
+	const parsePercent = str => (
+		str.endsWith('%')
+		? (parseFloat(str.slice(0, -1)) / 100)
+		: parseFloat(str)
+	)
+	const add = (acc, val) => (acc + val)
+	const declaredSizeSum = declaredSizeList.map(parsePercent).reduce(add, 0) || 0
+	const restSizeSum = 1 - declaredSizeSum
+	const numAutoSize = childSizeList.length - declaredSizeList.length
+	const eachAutoSize = `${restSizeSum / numAutoSize * 100}%`
+	children.forEach(child => {
+		if (child.style.flexBasis == 'auto') {
+			child.style.flexBasis = eachAutoSize
+		}
+	})
+	//console.log(`initSizeChildren`, { children, childSizeList, declaredSizeSum, restSizeSum, numAutoSize, eachAutoSize })
+	//console.log(`initSizeChildren: children=${children} childSizeList=${childSizeList} declaredSizeSum=${declaredSizeSum} restSizeSum=${restSizeSum} numAutoSize=${numAutoSize} eachAutoSize=${eachAutoSize}`)
+}
+
+
+
 // horizontal splitter = flex-direction: row
 export function SplitX(props) {
+	let ref
+	onMount(() => {
+		//console.log(`SplitX onMount: ref`, ref)
+		//console.log(`SplitX onMount: calling initSizeChildren`)
+		initSizeChildren(ref.children)
+	})
 	// https://www.solidjs.com/tutorial/props_children
 	const getChildren = children(() => {
 		//console.log('SplitY: props.children', props.children);
 		const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
-		return getChildArray.map(getChild => {
+		const children = getChildArray.map(getChild => {
 
 			// fix: Uncaught TypeError: getChild is not a function
 			//const childComponent = getChild();
@@ -112,12 +166,16 @@ export function SplitX(props) {
 			}
 			return <SplitItem>{childComponent}</SplitItem>
 		});
+		//console.log(`SplitX getChildren: calling initSizeChildren`)
+		//initSizeChildren(children);
+		return children;
 	});
 	return (
 		<div
+			ref={ref}
 			class={['split-horizontal', props.reverse ? 'layout-reverse' : ''].join(' ')}
 			style={{
-				'flex-grow': 1,
+				'flex': '1 0 ' + (props.size || 'auto'),
 				overflow: 'auto',
 				...(props.style || {}),
 			}}
