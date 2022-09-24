@@ -42,6 +42,432 @@ true&&(function polyfill() {
     }
 }());
 
+const sharedConfig$1 = {};
+let runEffects$1 = runQueue$1;
+const STALE$1 = 1;
+const PENDING$1 = 2;
+const UNOWNED$1 = {
+  owned: null,
+  cleanups: null,
+  context: null,
+  owner: null
+};
+var Owner$1 = null;
+let Transition$1 = null;
+let Listener$1 = null;
+let Updates$1 = null;
+let Effects$1 = null;
+let ExecCount$1 = 0;
+function createRoot(fn, detachedOwner) {
+  const listener = Listener$1,
+        owner = Owner$1,
+        unowned = fn.length === 0,
+        root = unowned && !false ? UNOWNED$1 : {
+    owned: null,
+    cleanups: null,
+    context: null,
+    owner: detachedOwner || owner
+  },
+        updateFn = unowned ? fn : () => fn(() => untrack$1(() => cleanNode$1(root)));
+  Owner$1 = root;
+  Listener$1 = null;
+  try {
+    return runUpdates$1(updateFn, true);
+  } finally {
+    Listener$1 = listener;
+    Owner$1 = owner;
+  }
+}
+function createRenderEffect$1(fn, value, options) {
+  const c = createComputation$1(fn, value, false, STALE$1);
+  updateComputation$1(c);
+}
+function untrack$1(fn) {
+  let result,
+      listener = Listener$1;
+  Listener$1 = null;
+  result = fn();
+  Listener$1 = listener;
+  return result;
+}
+function writeSignal$1(node, value, isComp) {
+  let current = node.value;
+  if (!node.comparator || !node.comparator(current, value)) {
+    node.value = value;
+    if (node.observers && node.observers.length) {
+      runUpdates$1(() => {
+        for (let i = 0; i < node.observers.length; i += 1) {
+          const o = node.observers[i];
+          const TransitionRunning = Transition$1 && Transition$1.running;
+          if (TransitionRunning && Transition$1.disposed.has(o)) ;
+          if (TransitionRunning && !o.tState || !TransitionRunning && !o.state) {
+            if (o.pure) Updates$1.push(o);else Effects$1.push(o);
+            if (o.observers) markDownstream$1(o);
+          }
+          if (TransitionRunning) ;else o.state = STALE$1;
+        }
+        if (Updates$1.length > 10e5) {
+          Updates$1 = [];
+          if (false) ;
+          throw new Error();
+        }
+      }, false);
+    }
+  }
+  return value;
+}
+function updateComputation$1(node) {
+  if (!node.fn) return;
+  cleanNode$1(node);
+  const owner = Owner$1,
+        listener = Listener$1,
+        time = ExecCount$1;
+  Listener$1 = Owner$1 = node;
+  runComputation$1(node, node.value, time);
+  Listener$1 = listener;
+  Owner$1 = owner;
+}
+function runComputation$1(node, value, time) {
+  let nextValue;
+  try {
+    nextValue = node.fn(value);
+  } catch (err) {
+    if (node.pure) node.state = STALE$1;
+    handleError$1(err);
+  }
+  if (!node.updatedAt || node.updatedAt <= time) {
+    if (node.updatedAt != null && "observers" in node) {
+      writeSignal$1(node, nextValue);
+    } else node.value = nextValue;
+    node.updatedAt = time;
+  }
+}
+function createComputation$1(fn, init, pure, state = STALE$1, options) {
+  const c = {
+    fn,
+    state: state,
+    updatedAt: null,
+    owned: null,
+    sources: null,
+    sourceSlots: null,
+    cleanups: null,
+    value: init,
+    owner: Owner$1,
+    context: null,
+    pure
+  };
+  if (Owner$1 === null) ;else if (Owner$1 !== UNOWNED$1) {
+    {
+      if (!Owner$1.owned) Owner$1.owned = [c];else Owner$1.owned.push(c);
+    }
+  }
+  return c;
+}
+function runTop$1(node) {
+  const runningTransition = Transition$1 ;
+  if (node.state === 0 || runningTransition ) return;
+  if (node.state === PENDING$1 || runningTransition ) return lookUpstream$1(node);
+  if (node.suspense && untrack$1(node.suspense.inFallback)) return node.suspense.effects.push(node);
+  const ancestors = [node];
+  while ((node = node.owner) && (!node.updatedAt || node.updatedAt < ExecCount$1)) {
+    if (node.state || runningTransition ) ancestors.push(node);
+  }
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    node = ancestors[i];
+    if (node.state === STALE$1 || runningTransition ) {
+      updateComputation$1(node);
+    } else if (node.state === PENDING$1 || runningTransition ) {
+      const updates = Updates$1;
+      Updates$1 = null;
+      runUpdates$1(() => lookUpstream$1(node, ancestors[0]), false);
+      Updates$1 = updates;
+    }
+  }
+}
+function runUpdates$1(fn, init) {
+  if (Updates$1) return fn();
+  let wait = false;
+  if (!init) Updates$1 = [];
+  if (Effects$1) wait = true;else Effects$1 = [];
+  ExecCount$1++;
+  try {
+    const res = fn();
+    completeUpdates$1(wait);
+    return res;
+  } catch (err) {
+    if (!Updates$1) Effects$1 = null;
+    handleError$1(err);
+  }
+}
+function completeUpdates$1(wait) {
+  if (Updates$1) {
+    runQueue$1(Updates$1);
+    Updates$1 = null;
+  }
+  if (wait) return;
+  const e = Effects$1;
+  Effects$1 = null;
+  if (e.length) runUpdates$1(() => runEffects$1(e), false);
+}
+function runQueue$1(queue) {
+  for (let i = 0; i < queue.length; i++) runTop$1(queue[i]);
+}
+function lookUpstream$1(node, ignore) {
+  const runningTransition = Transition$1 ;
+  node.state = 0;
+  for (let i = 0; i < node.sources.length; i += 1) {
+    const source = node.sources[i];
+    if (source.sources) {
+      if (source.state === STALE$1 || runningTransition ) {
+        if (source !== ignore) runTop$1(source);
+      } else if (source.state === PENDING$1 || runningTransition ) lookUpstream$1(source, ignore);
+    }
+  }
+}
+function markDownstream$1(node) {
+  const runningTransition = Transition$1 ;
+  for (let i = 0; i < node.observers.length; i += 1) {
+    const o = node.observers[i];
+    if (!o.state || runningTransition ) {
+      o.state = PENDING$1;
+      if (o.pure) Updates$1.push(o);else Effects$1.push(o);
+      o.observers && markDownstream$1(o);
+    }
+  }
+}
+function cleanNode$1(node) {
+  let i;
+  if (node.sources) {
+    while (node.sources.length) {
+      const source = node.sources.pop(),
+            index = node.sourceSlots.pop(),
+            obs = source.observers;
+      if (obs && obs.length) {
+        const n = obs.pop(),
+              s = source.observerSlots.pop();
+        if (index < obs.length) {
+          n.sourceSlots[s] = index;
+          obs[index] = n;
+          source.observerSlots[index] = s;
+        }
+      }
+    }
+  }
+  if (node.owned) {
+    for (i = 0; i < node.owned.length; i++) cleanNode$1(node.owned[i]);
+    node.owned = null;
+  }
+  if (node.cleanups) {
+    for (i = 0; i < node.cleanups.length; i++) node.cleanups[i]();
+    node.cleanups = null;
+  }
+  node.state = 0;
+  node.context = null;
+}
+function castError$1(err) {
+  if (err instanceof Error || typeof err === "string") return err;
+  return new Error("Unknown error");
+}
+function handleError$1(err) {
+  err = castError$1(err);
+  throw err;
+}
+function createComponent$1(Comp, props) {
+  return untrack$1(() => Comp(props || {}));
+}
+
+function reconcileArrays$1(parentNode, a, b) {
+  let bLength = b.length,
+      aEnd = a.length,
+      bEnd = bLength,
+      aStart = 0,
+      bStart = 0,
+      after = a[aEnd - 1].nextSibling,
+      map = null;
+  while (aStart < aEnd || bStart < bEnd) {
+    if (a[aStart] === b[bStart]) {
+      aStart++;
+      bStart++;
+      continue;
+    }
+    while (a[aEnd - 1] === b[bEnd - 1]) {
+      aEnd--;
+      bEnd--;
+    }
+    if (aEnd === aStart) {
+      const node = bEnd < bLength ? bStart ? b[bStart - 1].nextSibling : b[bEnd - bStart] : after;
+      while (bStart < bEnd) parentNode.insertBefore(b[bStart++], node);
+    } else if (bEnd === bStart) {
+      while (aStart < aEnd) {
+        if (!map || !map.has(a[aStart])) a[aStart].remove();
+        aStart++;
+      }
+    } else if (a[aStart] === b[bEnd - 1] && b[bStart] === a[aEnd - 1]) {
+      const node = a[--aEnd].nextSibling;
+      parentNode.insertBefore(b[bStart++], a[aStart++].nextSibling);
+      parentNode.insertBefore(b[--bEnd], node);
+      a[aEnd] = b[bEnd];
+    } else {
+      if (!map) {
+        map = new Map();
+        let i = bStart;
+        while (i < bEnd) map.set(b[i], i++);
+      }
+      const index = map.get(a[aStart]);
+      if (index != null) {
+        if (bStart < index && index < bEnd) {
+          let i = aStart,
+              sequence = 1,
+              t;
+          while (++i < aEnd && i < bEnd) {
+            if ((t = map.get(a[i])) == null || t !== index + sequence) break;
+            sequence++;
+          }
+          if (sequence > index - bStart) {
+            const node = a[aStart];
+            while (bStart < index) parentNode.insertBefore(b[bStart++], node);
+          } else parentNode.replaceChild(b[bStart++], a[aStart++]);
+        } else aStart++;
+      } else a[aStart++].remove();
+    }
+  }
+}
+function render(code, element, init) {
+  let disposer;
+  createRoot(dispose => {
+    disposer = dispose;
+    element === document ? code() : insert$1(element, code(), element.firstChild ? null : undefined, init);
+  });
+  return () => {
+    disposer();
+    element.textContent = "";
+  };
+}
+function template$1(html, check, isSVG) {
+  const t = document.createElement("template");
+  t.innerHTML = html;
+  let node = t.content.firstChild;
+  if (isSVG) node = node.firstChild;
+  return node;
+}
+function insert$1(parent, accessor, marker, initial) {
+  if (marker !== undefined && !initial) initial = [];
+  if (typeof accessor !== "function") return insertExpression$1(parent, accessor, initial, marker);
+  createRenderEffect$1(current => insertExpression$1(parent, accessor(), current, marker), initial);
+}
+function insertExpression$1(parent, value, current, marker, unwrapArray) {
+  if (sharedConfig$1.context && !current) current = [...parent.childNodes];
+  while (typeof current === "function") current = current();
+  if (value === current) return current;
+  const t = typeof value,
+        multi = marker !== undefined;
+  parent = multi && current[0] && current[0].parentNode || parent;
+  if (t === "string" || t === "number") {
+    if (sharedConfig$1.context) return current;
+    if (t === "number") value = value.toString();
+    if (multi) {
+      let node = current[0];
+      if (node && node.nodeType === 3) {
+        node.data = value;
+      } else node = document.createTextNode(value);
+      current = cleanChildren$1(parent, current, marker, node);
+    } else {
+      if (current !== "" && typeof current === "string") {
+        current = parent.firstChild.data = value;
+      } else current = parent.textContent = value;
+    }
+  } else if (value == null || t === "boolean") {
+    if (sharedConfig$1.context) return current;
+    current = cleanChildren$1(parent, current, marker);
+  } else if (t === "function") {
+    createRenderEffect$1(() => {
+      let v = value();
+      while (typeof v === "function") v = v();
+      current = insertExpression$1(parent, v, current, marker);
+    });
+    return () => current;
+  } else if (Array.isArray(value)) {
+    const array = [];
+    const currentArray = current && Array.isArray(current);
+    if (normalizeIncomingArray$1(array, value, current, unwrapArray)) {
+      createRenderEffect$1(() => current = insertExpression$1(parent, array, current, marker, true));
+      return () => current;
+    }
+    if (sharedConfig$1.context) {
+      if (!array.length) return current;
+      for (let i = 0; i < array.length; i++) {
+        if (array[i].parentNode) return current = array;
+      }
+    }
+    if (array.length === 0) {
+      current = cleanChildren$1(parent, current, marker);
+      if (multi) return current;
+    } else if (currentArray) {
+      if (current.length === 0) {
+        appendNodes$1(parent, array, marker);
+      } else reconcileArrays$1(parent, current, array);
+    } else {
+      current && cleanChildren$1(parent);
+      appendNodes$1(parent, array);
+    }
+    current = array;
+  } else if (value instanceof Node) {
+    if (sharedConfig$1.context && value.parentNode) return current = multi ? [value] : value;
+    if (Array.isArray(current)) {
+      if (multi) return current = cleanChildren$1(parent, current, marker, value);
+      cleanChildren$1(parent, current, null, value);
+    } else if (current == null || current === "" || !parent.firstChild) {
+      parent.appendChild(value);
+    } else parent.replaceChild(value, parent.firstChild);
+    current = value;
+  } else ;
+  return current;
+}
+function normalizeIncomingArray$1(normalized, array, current, unwrap) {
+  let dynamic = false;
+  for (let i = 0, len = array.length; i < len; i++) {
+    let item = array[i],
+        prev = current && current[i];
+    if (item instanceof Node) {
+      normalized.push(item);
+    } else if (item == null || item === true || item === false) ; else if (Array.isArray(item)) {
+      dynamic = normalizeIncomingArray$1(normalized, item, prev) || dynamic;
+    } else if ((typeof item) === "function") {
+      if (unwrap) {
+        while (typeof item === "function") item = item();
+        dynamic = normalizeIncomingArray$1(normalized, Array.isArray(item) ? item : [item], Array.isArray(prev) ? prev : [prev]) || dynamic;
+      } else {
+        normalized.push(item);
+        dynamic = true;
+      }
+    } else {
+      const value = String(item);
+      if (prev && prev.nodeType === 3 && prev.data === value) {
+        normalized.push(prev);
+      } else normalized.push(document.createTextNode(value));
+    }
+  }
+  return dynamic;
+}
+function appendNodes$1(parent, array, marker) {
+  for (let i = 0, len = array.length; i < len; i++) parent.insertBefore(array[i], marker);
+}
+function cleanChildren$1(parent, current, marker, replacement) {
+  if (marker === undefined) return parent.textContent = "";
+  const node = replacement || document.createTextNode("");
+  if (current.length) {
+    let inserted = false;
+    for (let i = current.length - 1; i >= 0; i--) {
+      const el = current[i];
+      if (node !== el) {
+        const isParent = el.parentNode === parent;
+        if (!inserted && !i) isParent ? parent.replaceChild(node, el) : parent.insertBefore(node, marker);else isParent && el.remove();
+      } else inserted = true;
+    }
+  } else parent.insertBefore(node, marker);
+  return [node];
+}
+
 const sharedConfig = {};
 function setHydrateContext(context) {
   sharedConfig.context = context;
@@ -66,26 +492,6 @@ let Listener = null;
 let Updates = null;
 let Effects = null;
 let ExecCount = 0;
-function createRoot(fn, detachedOwner) {
-  const listener = Listener,
-        owner = Owner,
-        unowned = fn.length === 0,
-        root = unowned && !false ? UNOWNED : {
-    owned: null,
-    cleanups: null,
-    context: null,
-    owner: detachedOwner || owner
-  },
-        updateFn = unowned ? fn : () => fn(() => untrack(() => cleanNode(root)));
-  Owner = root;
-  Listener = null;
-  try {
-    return runUpdates(updateFn, true);
-  } finally {
-    Listener = listener;
-    Owner = owner;
-  }
-}
 function createRenderEffect(fn, value, options) {
   const c = createComputation(fn, value, false, STALE);
   updateComputation(c);
@@ -424,17 +830,6 @@ function reconcileArrays(parentNode, a, b) {
 }
 
 const $$EVENTS = "_$DX_DELEGATE";
-function render(code, element, init) {
-  let disposer;
-  createRoot(dispose => {
-    disposer = dispose;
-    element === document ? code() : insert(element, code(), element.firstChild ? null : undefined, init);
-  });
-  return () => {
-    disposer();
-    element.textContent = "";
-  };
-}
 function template(html, check, isSVG) {
   const t = document.createElement("template");
   t.innerHTML = html;
@@ -646,6 +1041,10 @@ function SplitRoot(props) {
         ref.style['flex-grow'] = '1';
         ref.style['height'] = '';
       }
+
+      console.log(`SplitRoot onMount: ref`, ref);
+      console.log(`SplitRoot onMount: calling initSizeChildren`);
+      initSizeChildren(ref.children);
     });
   });
   return (() => {
@@ -665,11 +1064,17 @@ function SplitRoot(props) {
 // vertical splitter = flex-direction: column
 
 function SplitY(props) {
-  // https://www.solidjs.com/tutorial/props_children
+  let ref;
+  onMount(() => {
+    console.log(`SplitY onMount: ref`, ref);
+    console.log(`SplitY onMount: calling initSizeChildren`);
+    initSizeChildren(ref.children);
+  }); // https://www.solidjs.com/tutorial/props_children
+
   const getChildren = children(() => {
     //console.log('SplitY: props.children', props.children);
     const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
-    return getChildArray.map(getChild => {
+    const children = getChildArray.map(getChild => {
       // fix: Uncaught TypeError: getChild is not a function
       //const childComponent = getChild();
       //console.log('getChild', typeof(getChild), getChild);
@@ -684,17 +1089,22 @@ function SplitY(props) {
       return createComponent(SplitItem, {
         children: childComponent
       });
-    });
+    }); //initSizeChildren(children);
+
+    return children;
   });
   return (() => {
     const _el$2 = _tmpl$2.cloneNode(true);
+
+    const _ref$2 = ref;
+    typeof _ref$2 === "function" ? use(_ref$2, _el$2) : ref = _el$2;
 
     insert(_el$2, getChildren);
 
     createRenderEffect(_p$ => {
       const _v$ = ['split-vertical', props.reverse ? 'layout-reverse' : ''].join(' '),
             _v$2 = {
-        'flex-grow': 1,
+        'flex': '1 0 ' + (props.size || 'auto'),
         overflow: 'auto',
         ...(props.style || {})
       };
@@ -709,14 +1119,49 @@ function SplitY(props) {
 
     return _el$2;
   })();
+} // calculate initial sizes
+// flex does this wrong
+// example: 2 children:
+//   <div size="50%">1</div>
+//   <div>2</div>
+// -> 1 is larger, but both should have 50%
+// TODO cleanup
+
+function initSizeChildren(children) {
+  children = Array.from(children);
+  const childSizeList = children.map(child => child.style.flexBasis || 'auto');
+  const declaredSizeList = childSizeList.filter(size => size != 'auto');
+
+  const parsePercent = str => str.endsWith('%') ? parseFloat(str.slice(0, -1)) / 100 : parseFloat(str);
+
+  const add = (acc, val) => acc + val;
+
+  const declaredSizeSum = declaredSizeList.map(parsePercent).reduce(add, 0) || 0;
+  const restSizeSum = 1 - declaredSizeSum;
+  const numAutoSize = childSizeList.length - declaredSizeList.length;
+  const eachAutoSize = `${restSizeSum / numAutoSize * 100}%`;
+  children.forEach(child => {
+    if (child.style.flexBasis == 'auto') {
+      child.style.flexBasis = eachAutoSize;
+    }
+  }); //console.log(`initSizeChildren`, { children, childSizeList, declaredSizeSum, restSizeSum, numAutoSize, eachAutoSize })
+
+  console.log(`initSizeChildren: children=${children} childSizeList=${childSizeList} declaredSizeSum=${declaredSizeSum} restSizeSum=${restSizeSum} numAutoSize=${numAutoSize} eachAutoSize=${eachAutoSize}`);
 } // horizontal splitter = flex-direction: row
 
+
 function SplitX(props) {
-  // https://www.solidjs.com/tutorial/props_children
+  let ref;
+  onMount(() => {
+    console.log(`SplitX onMount: ref`, ref);
+    console.log(`SplitX onMount: calling initSizeChildren`);
+    initSizeChildren(ref.children);
+  }); // https://www.solidjs.com/tutorial/props_children
+
   const getChildren = children(() => {
     //console.log('SplitY: props.children', props.children);
     const getChildArray = Array.isArray(props.children) ? props.children : [props.children];
-    return getChildArray.map(getChild => {
+    const children = getChildArray.map(getChild => {
       // fix: Uncaught TypeError: getChild is not a function
       //const childComponent = getChild();
       //console.log('getChild', typeof(getChild), getChild);
@@ -731,17 +1176,23 @@ function SplitX(props) {
       return createComponent(SplitItem, {
         children: childComponent
       });
-    });
+    }); //console.log(`SplitX getChildren: calling initSizeChildren`)
+    //initSizeChildren(children);
+
+    return children;
   });
   return (() => {
     const _el$3 = _tmpl$2.cloneNode(true);
+
+    const _ref$3 = ref;
+    typeof _ref$3 === "function" ? use(_ref$3, _el$3) : ref = _el$3;
 
     insert(_el$3, getChildren);
 
     createRenderEffect(_p$ => {
       const _v$3 = ['split-horizontal', props.reverse ? 'layout-reverse' : ''].join(' '),
             _v$4 = {
-        'flex-grow': 1,
+        'flex': '1 0 ' + (props.size || 'auto'),
         overflow: 'auto',
         ...(props.style || {})
       };
@@ -923,7 +1374,7 @@ function SplitItem(props) {
         // on drag. If there are three initial panels, they need to
         // start at 33% each, etc.
 
-        if (node.parentElement.classList.contains('split-horizontal')) node.style.width = amount;else if (node.parentElement.classList.contains('split-vertical')) node.style.height = amount;
+        node.style.flexBasis = amount;
       }
     }
   } // csd: CSSStyleDeclaration
@@ -984,7 +1435,10 @@ function SplitItem(props) {
 
       createRenderEffect(_p$ => {
         const _v$5 = {
-          'flex-grow': 1,
+          //'flex-grow': 1,
+          //'flex-shrink': 0,
+          //'flex-basis': props.size || 'auto',
+          'flex': '1 0 ' + (props.size || 'auto'),
           ...childStyle()
         },
               _v$6 = props.style;
@@ -1228,7 +1682,7 @@ globalStyle(
 
 delegateEvents(["pointerdown"]);
 
-const _tmpl$ = /*#__PURE__*/template(`<style>
+const _tmpl$ = /*#__PURE__*/template$1(`<style>
 					.content {
 						width: 100%;
 						height: 100%;
@@ -1236,23 +1690,26 @@ const _tmpl$ = /*#__PURE__*/template(`<style>
 					}
 				</style>`);
 function App(props) {
-  return createComponent(SplitRoot, {
+  return createComponent$1(SplitRoot, {
     get children() {
-      return [createComponent(SplitX, {
+      return [createComponent$1(SplitX, {
         get children() {
-          return [createComponent(SplitItem, {
+          return [createComponent$1(SplitItem, {
+            size: "20%",
             children: "aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa"
-          }), createComponent(SplitY, {
+          }), createComponent$1(SplitY, {
+            size: "60%",
+
             get children() {
-              return [createComponent(SplitItem, {
+              return [createComponent$1(SplitItem, {
                 children: "bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb"
-              }), createComponent(SplitItem, {
+              }), createComponent$1(SplitItem, {
                 children: "bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb"
-              }), createComponent(SplitX, {
+              }), createComponent$1(SplitX, {
                 get children() {
-                  return [createComponent(SplitItem, {
+                  return [createComponent$1(SplitItem, {
                     children: "cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc"
-                  }), createComponent(SplitItem, {
+                  }), createComponent$1(SplitItem, {
                     children: "cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc cccccccccccccc"
                   })];
                 }
@@ -1260,6 +1717,8 @@ function App(props) {
               })];
             }
 
+          }), createComponent$1(SplitItem, {
+            children: "dddddddddddddd dddddddddddddd dddddddddddddd dddddddddddddd dddddddddddddd dddddddddddddd dddddddddddddd dddddddddddddd dddddddddddddd"
           })];
         }
 
