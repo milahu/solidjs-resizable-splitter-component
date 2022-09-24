@@ -379,8 +379,7 @@ export function SplitItem(props) {
 				// number of panels. Currently it is not applied initially, only
 				// on drag. If there are three initial panels, they need to
 				// start at 33% each, etc.
-				if (node.parentElement.classList.contains('split-horizontal')) node.style.width = amount
-				else if (node.parentElement.classList.contains('split-vertical')) node.style.height = amount
+				node.style.flexBasis = amount
 			}
 		}
 	}
