@@ -5,12 +5,12 @@ export function App(props) {
 	return (
 		<SplitRoot>
 			<SplitX>
-				<SplitItem>
+				<SplitItem size="20%">
 					aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa
 					aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa
 					aaaaaaaaaaaaaa aaaaaaaaaaaaaa aaaaaaaaaaaaaa
 				</SplitItem>
-				<SplitY>
+				<SplitY size="60%">
 					<SplitItem>
 						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
 						bbbbbbbbbbbbbb bbbbbbbbbbbbbb bbbbbbbbbbbbbb
@@ -34,6 +34,11 @@ export function App(props) {
 						</SplitItem>
 					</SplitX>
 				</SplitY>
+				<SplitItem>
+					dddddddddddddd dddddddddddddd dddddddddddddd
+					dddddddddddddd dddddddddddddd dddddddddddddd
+					dddddddddddddd dddddddddddddd dddddddddddddd
+				</SplitItem>
 			</SplitX>
 			<style>{
 				/*css*/ `
