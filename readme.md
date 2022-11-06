@@ -2,6 +2,13 @@
 
 A component that allows splitting an area into multiple horizontal or vertical resizable panels.
 
+## Status
+
+:warning: deprecated in favor of
+
+- [split](https://github.com/nathancahill/split) - utilities for resizeable split views
+- [areas](https://github.com/bimdata/areas) - A Vue.js Blender style area manager to create custom layouts
+
 ## Demo
 
 See a [live demo](https://milahu.github.io/solidjs-resizable-splitter-component/).
